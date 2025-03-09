@@ -19,13 +19,13 @@ export async function POST(req: NextRequest) {
 
     if (toDate) {
       toDate.setUTCHours(23, 59, 59, 999);
+    } else if (fromDate && !toDate) {
+      // Kalau hanya ada fromDate, set toDate ke akhir hari yang sama
+      toDate = new Date(fromDate);
+      toDate.setUTCHours(23, 59, 59, 999);
     }
 
-    const dateFilter = fromDate
-      ? toDate
-        ? { gte: fromDate, lte: toDate }
-        : { gte: fromDate, lte: fromDate }
-      : {};
+    const dateFilter = fromDate && toDate ? { gte: fromDate, lte: toDate } : {};
 
     console.log("fromDate:", fromDate);
     console.log("toDate:", toDate);
