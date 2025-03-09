@@ -14,6 +14,33 @@ pnpm dev
 bun dev
 ```
 
+```bash
+npm i
+# or
+npm install
+
+npx prisma db push
+# untuk push db yg terbaru dari model
+```
+
+```bash
+#command git semantara
+git pull origin <namabranch>
+
+#kalo ada error coba / tidak bisa coba
+git config pull.rebase false
+
+# benerin conflict dan commit
+
+# kalo sudah
+git push origin <branchYgInginDipush>
+```
+
+```bash
+#env untuk db
+DATABASE_URL=""
+```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.

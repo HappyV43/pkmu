@@ -27,6 +27,8 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
+.env*.production
 
 # vercel
 .vercel
@@ -34,3 +36,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Ignore Docker Compose files
+docker-compose.yml
+docker-compose.override.yml
+docker-compose.postgres.yml
+
+# Ignore Dockerfiles
+Dockerfile
+Dockerfile.dev
+Dockerfile.prod
+
+generated
+
+prisma/migrations
+.idea

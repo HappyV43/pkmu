@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma_client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  password    String
+  role        String
+  companiesId Int?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  session          Session[]
+  alokasiCreatedBy Allocations[] @relation("createdByRelation")
+  alokasiUpdatedBy Allocations[] @relation("updatedByRelation")
+
+  lpgCreatedBy LpgDistributions[] @relation("lpgCreatedByRelation")
+  lpgUpdatedBy LpgDistributions[] @relation("lpgUpdatedByRelation")
+
+  agentCreatedBy Agents[] @relation("agentCreatedByRelation")
+  agentUpdatedBy Agents[] @relation("agentUpdatedByRelation")
+
+  companiesCreatedBy Companies[] @relation("companiesCreatedByRelation")
+  companiesUpdatedBy Companies[] @relation("companiesUpdatedByRelation")
+
+  MonthlyAllocationsCreatedby MonthlyAllocations[] @relation("createdByRelationMonthly")
+  MonthlyAllocationsUpdatedBy MonthlyAllocations[] @relation("updatedByRelationMonthly")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Companies {
+  id          Int      @id @default(autoincrement())
+  companyName String
+  address     String
+  telephone   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String
+  updatedBy   String
+  agent       Agents[]
+
+  creator User @relation("companiesCreatedByRelation", fields: [createdBy], references: [id])
+  updater User @relation("companiesUpdatedByRelation", fields: [updatedBy], references: [id])
+}
+
+model Agents {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  companyName String
+  shipTo      String?
+  agentName   String
+  address     String
+  city        String
+  phone       String
+  fax         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String
+  updatedBy   String
+
+  Companies   Companies     @relation(fields: [companyId], references: [id])
+  creator     User          @relation("agentCreatedByRelation", fields: [createdBy], references: [id])
+  updater     User          @relation("agentUpdatedByRelation", fields: [updatedBy], references: [id])
+  Allocations Allocations[]
+}
+
+model Allocations {
+  id              Int               @id @default(autoincrement())
+  giDate          DateTime?
+  bpeNumber       String?
+  deliveryNumber  String
+  agentId         Int?
+  shipTo          String
+  materialName    String
+  agentName       String
+  plannedGiDate   DateTime?
+  allocatedQty    Int
+  status          String            @default("Pending")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  createdBy       String
+  updatedBy       String
+  lpgDistribution LpgDistributions?
+  Agent           Agents?           @relation(fields: [agentId], references: [id])
+  creator         User              @relation("createdByRelation", fields: [createdBy], references: [id])
+  updater         User              @relation("updatedByRelation", fields: [updatedBy], references: [id])
+}
+
+model MonthlyAllocations {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  totalElpiji Int
+  volume      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String
+  updatedBy   String
+  creator     User     @relation("createdByRelationMonthly", fields: [createdBy], references: [id])
+  updater     User     @relation("updatedByRelationMonthly", fields: [updatedBy], references: [id])
+}
+
+model LpgDistributions {
+  id              Int         @id @default(autoincrement())
+  allocationId    Int         @unique
+  deliveryNumber  String
+  bpeNumber       String
+  giDate          DateTime
+  shipTo          String
+  agentName       String
+  licensePlate    String
+  allocatedQty    Int
+  driverName      String
+  distributionQty Int
+  gateKeeper      String?
+  superVisor      String?
+  administrasi    String?
+  volume          Int
+  bocor           Int?
+  isiKurang       Int?
+  status          String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  createdBy       String
+  updatedBy       String
+  allocation      Allocations @relation(fields: [allocationId], references: [id])
+  creator         User        @relation("lpgCreatedByRelation", fields: [createdBy], references: [id])
+  updater         User        @relation("lpgUpdatedByRelation", fields: [updatedBy], references: [id])
+}
