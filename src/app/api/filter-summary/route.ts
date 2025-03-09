@@ -10,42 +10,44 @@ export async function POST(req: NextRequest) {
 
     const { from, to } = body;
 
-    const fromDate = from ? new Date(from) : null;
+    let fromDate = from ? new Date(from) : null;
     let toDate = to ? new Date(to) : null;
 
-    if (!fromDate && !toDate) {
-      // Kalau dari dan ke sama-sama null, ambil semua data
-      console.log("Ambil semua data tanpa filter tanggal");
-    } else if (fromDate && !toDate) {
-      // Kalau cuma ada fromDate, set toDate ke akhir hari itu
-      toDate = new Date(fromDate);
-      toDate.setHours(23, 59, 59, 999);
-    } else {
-      // Kalau ada kedua tanggal, set jam dari toDate ke akhir hari
-      fromDate?.setHours(0, 0, 0, 0);
-      toDate?.setHours(23, 59, 59, 999);
+    if (fromDate) {
+      fromDate.setUTCHours(0, 0, 0, 0);
     }
 
-    console.log(fromDate, toDate);
+    if (toDate) {
+      toDate.setUTCHours(23, 59, 59, 999);
+    }
+
+    const dateFilter = fromDate
+      ? toDate
+        ? { gte: fromDate, lte: toDate }
+        : { gte: fromDate, lte: fromDate }
+      : {};
+
+    console.log("fromDate:", fromDate);
+    console.log("toDate:", toDate);
 
     const [dailySummary, distributionSummary, monthlyData, uniqueDate] =
       await prisma.$transaction([
         prisma.allocations.aggregate({
           _sum: { allocatedQty: true },
           _count: { allocatedQty: true },
-          where: fromDate && toDate ? { giDate: { gte: fromDate, lte: toDate } } : {},
+          where: { giDate: dateFilter },
           orderBy: { plannedGiDate: "asc" },
         }),
         prisma.lpgDistributions.aggregate({
           _sum: { distributionQty: true },
           _count: { distributionQty: true },
-          where: fromDate && toDate ? { giDate: { gte: fromDate, lte: toDate } } : {},
+          where: { giDate: dateFilter },
           orderBy: { giDate: "asc" },
         }),
         prisma.monthlyAllocations.aggregate({
           _sum: { totalElpiji: true },
           _count: { totalElpiji: true },
-          where: fromDate && toDate ? { date: { gte: fromDate, lte: toDate } } : {},
+          where: { date: dateFilter },
           orderBy: { date: "asc" },
         }),
         prisma.lpgDistributions.findMany({
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
           select: {
             giDate: true,
           },
-          where: fromDate && toDate ? { giDate: { gte: fromDate, lte: toDate } } : {},
+          where: { giDate: dateFilter },
           orderBy: {
             giDate: "asc",
           },
