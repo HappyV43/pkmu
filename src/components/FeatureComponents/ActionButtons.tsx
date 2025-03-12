@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { EditForm } from "./EditForm";
+// import { EditForm } from "./EditForm";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import CetakPenyaluran from "./CetakDistribusi/CetakPenyaluran";
 
@@ -55,7 +55,7 @@ export function ActionButtons({ data, page }: ActionButtonProps) {
               Make changes to your data here. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
-          <EditForm data={data} page={page} />
+          {/* <EditForm data={data} page={page} /> */}
           <DialogFooter>
             <Button onClick={handleCloseDialog}>Close</Button>
           </DialogFooter>
