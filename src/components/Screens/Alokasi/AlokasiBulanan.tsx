@@ -3,12 +3,23 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "../../ui/button";
 import { DataTable } from "../../ui/data-table";
 import Link from "next/link";
-import { CalendarCheck, Database, SearchX, Upload, Weight, X } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import {
+  CalendarCheck,
+  Database,
+  Loader2,
+  SearchX,
+  Upload,
+  Weight,
+  X,
+} from "lucide-react";
 import MonthPicker from "@/components/FeatureComponents/MonthPicker";
 import { useEffect, useState } from "react";
 import { format, isSameMonth } from "date-fns";
-import { formatNumberQty, calculateTotalQty, calculateMontlyQty } from "@/utils/page";
+import {
+  formatNumberQty,
+  calculateTotalQty,
+  calculateMontlyQty,
+} from "@/utils/page";
 import { id } from "date-fns/locale";
 import { MonthlyAllocation } from "@/lib/types";
 import { getMonthlyAllocation } from "@/app/actions/alokasi.action";
@@ -20,10 +31,7 @@ interface AlokasiBulananProps<TData, TValue> {
   user: User;
 }
 
-const AlokasiBulanan = <
-  TData extends MonthlyAllocation,
-  TValue
->({
+const AlokasiBulanan = <TData extends MonthlyAllocation, TValue>({
   columns,
   user,
 }: AlokasiBulananProps<TData, TValue>) => {
@@ -31,15 +39,19 @@ const AlokasiBulanan = <
   const [currentMonth, setCurrentMonth] = useState<Date | null>(new Date());
   const [filteredData, setFilteredData] = useState<TData[]>([]);
   const [isFiltered, setIsFiltered] = useState<Boolean>(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (currentMonth) {
       const filtered = rawData.filter((item) =>
         item.date ? isSameMonth(new Date(item.date), currentMonth) : false
       );
+      setLoading(false);
+
       setIsFiltered(true);
       setFilteredData(filtered);
     } else {
+      setLoading(false);
       setIsFiltered(false);
       setFilteredData(rawData);
     }
@@ -47,13 +59,14 @@ const AlokasiBulanan = <
 
   const handleClearSearch = () => {
     setCurrentMonth(new Date());
-    setIsFiltered(false)
+    setIsFiltered(false);
   };
 
   useEffect(() => {
     const fetchData = async () => {
       const data = (await getMonthlyAllocation()) as TData[];
       setRawData(data);
+      // console.log(data);
     };
     fetchData();
   }, []);
@@ -90,18 +103,29 @@ const AlokasiBulanan = <
             </Button>
           )}
 
-          {/* MonthPicker with Responsive Behavior */}
           <div className="w-full md:w-auto flex md:items-center gap-2 items-center">
-            <MonthPicker
-              currentMonth={currentMonth!}
-              onMonthChange={setCurrentMonth}
-              placeholder={
-                currentMonth
-                  ? format(currentMonth, "MMMM yyyy", { locale: id })
-                  : "Semua Bulan"
-              }
-              className="flex-1"
-            />
+            {loading ? (
+              <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-md shadow-sm animate-fade-in">
+                <Loader2
+                  className="animate-spin h-5 w-5 text-gray-500"
+                  strokeWidth={2.5}
+                />
+                <span className="text-sm text-gray-700 font-medium">
+                  Mengambil Data...
+                </span>
+              </div>
+            ) : (
+              <MonthPicker
+                currentMonth={currentMonth!}
+                onMonthChange={setCurrentMonth}
+                placeholder={
+                  currentMonth
+                    ? format(currentMonth, "MMMM yyyy", { locale: id })
+                    : "Semua Bulan"
+                }
+                className="flex-1"
+              />
+            )}
             {/* {isFiltered && (
               <Button
                 variant={"destructive"}

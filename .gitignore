@@ -51,3 +51,6 @@ generated
 
 prisma/migrations
 .idea
+
+# noteku
+notes.txt

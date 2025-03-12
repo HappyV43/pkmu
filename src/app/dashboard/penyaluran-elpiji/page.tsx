@@ -1,8 +1,9 @@
 import { getCurrentSession } from "@/app/actions/auth.actions";
-import { getAllLpg } from "@/app/actions/lpg-distribution.action";
-import { ContentLayout } from "@/components/ContentLayout";
+import {
+  getFilterData,
+  getLpgDataDefault,
+} from "@/app/actions/lpg-distribution.action";
 import PenyaluranElpiji from "@/components/Screens/PenyaluranElpiji/PenyaluranElpiji";
-import { lpgDistributionColumns } from "@/lib/Column";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -10,21 +11,24 @@ export const metadata = {
 };
 
 const PenyaluranElpijiPage = async () => {
-  const { session, user } = await getCurrentSession();
+  const [dataBpeDeliveryAgent, sessionData, defaultData] = await Promise.all([
+    getFilterData(),
+    getCurrentSession(),
+    getLpgDataDefault(),
+  ]);
+
+  const { user, session } = sessionData;
   if (!session && !user) {
     redirect("/auth/login");
   }
   return (
-    // <ContentLayout
-    //   home={"dashboard"}
-    //   mainpage={"penyaluran-elpiji"}
-    //   children={
-        <PenyaluranElpiji
-          columns={lpgDistributionColumns}
-          user={user}
-        />
-    //   }
-    // />
+    <>
+      <PenyaluranElpiji
+        user={user}
+        dataBpeDeliveryAgent={dataBpeDeliveryAgent}
+        defaultData={defaultData}
+      />
+    </>
   );
 };
 

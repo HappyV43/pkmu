@@ -45,12 +45,14 @@ const SignUpForm = () => {
         variant: "destructive",
         title: "Gagal",
         description: res.error,
+        duration: 3000,
       });
     } else {
       router.push("/summary");
       toast({
         title: "Berhasill",
-        description: "Register Berhasil"
+        duration: 3000,
+        description: "Register Berhasil",
       });
     }
   }

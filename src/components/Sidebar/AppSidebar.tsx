@@ -26,10 +26,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Gagal",
         description: result.error,
         variant: "destructive",
+        duration: 3000,
       });
     } else {
       toast({
         title: "Logout berhasil",
+        duration: 3000,
       });
     }
   };

@@ -333,7 +333,7 @@ export const allDataDefault = async () => {
 
   // console.log(allDistributionSummary._count?._all);
 
-  const average = ((dailyAllo ?? 0) / totalProps).toFixed(2);
+  const average = totalProps ? ((dailyAllo ?? 0) / totalProps).toFixed(2) : "0";
 
   return {
     allSummary,

@@ -31,19 +31,21 @@ const Register = ({ role }: { role?: string }) => {
   });
 
   async function onSubmit(values: SignInValues) {
-    setIsLoading(true); 
+    setIsLoading(true);
     const res = await onlyRegister(values);
     if (res.error) {
-      setIsLoading(false); 
+      setIsLoading(false);
       toast({
         variant: "destructive",
         title: res.error,
+        duration: 3000,
       });
     } else {
-      setIsLoading(false); 
+      setIsLoading(false);
       router.push("/dashboard/penyaluran-elpiji");
       toast({
         title: "Register has been succesfully",
+        duration: 3000,
       });
     }
   }
@@ -52,6 +54,7 @@ const Register = ({ role }: { role?: string }) => {
     toast({
       variant: "destructive",
       title: "Hanya admin yang bisa akses",
+      duration: 3000,
     });
     redirect("/dashboard/penyaluran-elpiji");
   }

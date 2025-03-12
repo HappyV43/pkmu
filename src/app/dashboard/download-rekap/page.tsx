@@ -1,9 +1,6 @@
 import { getCurrentSession } from "@/app/actions/auth.actions";
 import { redirect } from "next/navigation";
-import {
-  getFilterData,
-  getLpgDataDefault,
-} from "@/app/actions/lpg-distribution.action";
+import { getFilterData } from "@/app/actions/lpg-distribution.action";
 import DownloadComponent from "@/components/Screens/Download/DownloadComponent";
 
 export const metadata = {
@@ -11,20 +8,14 @@ export const metadata = {
 };
 
 export default async function DownloadPage() {
-  const [dataBpeDeliveryAgent, sessionData, defaultData] = await Promise.all([
+  const [dataBpeDeliveryAgent, sessionData] = await Promise.all([
     getFilterData(),
     getCurrentSession(),
-    getLpgDataDefault(),
   ]);
 
   const { user, session } = sessionData;
   if (!session && !user) {
     redirect("/auth/login");
   }
-  return (
-    <DownloadComponent
-      dataBpeDeliveryAgent={dataBpeDeliveryAgent}
-      defaultData={defaultData}
-    />
-  );
+  return <DownloadComponent dataBpeDeliveryAgent={dataBpeDeliveryAgent} />;
 }

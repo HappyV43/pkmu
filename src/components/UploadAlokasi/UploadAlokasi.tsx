@@ -48,6 +48,7 @@ export default function UploadAlokasi({
           title:
             "Jenis file tidak valid. Harap unggah file dengan format .xlsx atau .xls.",
           variant: "destructive",
+          duration: 3000,
         });
         return;
       }
@@ -58,6 +59,7 @@ export default function UploadAlokasi({
           title:
             "Ukuran file melebihi 2 MB. Harap unggah file yang lebih kecil.",
           variant: "destructive",
+          duration: 3000,
         });
         return;
       }
@@ -103,6 +105,7 @@ export default function UploadAlokasi({
               ", "
             )}. Harap periksa format file Anda.`,
             variant: "destructive",
+            duration: 3000,
           });
           return;
         }
@@ -123,6 +126,7 @@ export default function UploadAlokasi({
               title: "Gagal",
               description: "Data tidak valid, ada nilai yang kosong/undefiend.",
               variant: "destructive",
+              duration: 3000,
             });
           }
 
@@ -158,6 +162,7 @@ export default function UploadAlokasi({
         toast({
           title: "Berhasil",
           description: "Alokasi harian berhasil ditambahkan",
+          duration: 3000,
         });
         router.push("/dashboard/alokasi-harian/");
       } else if (result?.error) {
@@ -166,6 +171,7 @@ export default function UploadAlokasi({
           title: "Gagal",
           description: result.error, // Display specific error message
           variant: "destructive",
+          duration: 3000,
         });
       } else if (result?.missingAgents) {
         setLoading(false);
@@ -176,6 +182,7 @@ export default function UploadAlokasi({
           title: "Gagal",
           description: "Alokasi harian gagal ditambahkan",
           variant: "destructive",
+          duration: 3000,
         });
         location.reload();
       }
@@ -187,6 +194,7 @@ export default function UploadAlokasi({
             ? "Harap pilih file untuk diunggah."
             : "Data tidak ditemukan. Harap periksa format file.",
         variant: "destructive",
+        duration: 3000,
       });
     }
   };
@@ -195,6 +203,7 @@ export default function UploadAlokasi({
     toast({
       variant: "destructive",
       title: "Hanya admin yang bisa akses",
+      duration: 3000,
     });
     redirect("/dashboard/penyaluran-elpiji");
   }

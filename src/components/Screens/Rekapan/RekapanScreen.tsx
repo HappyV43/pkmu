@@ -32,8 +32,10 @@ import {
   CalendarCheck,
   Database,
   Handshake,
+  Plus,
   Search,
   SearchX,
+  Upload,
   Weight,
   X,
 } from "lucide-react";
@@ -41,6 +43,7 @@ import { DataTableBackEnd } from "@/components/FeatureComponents/DataTableBackEn
 import { DataTable } from "@/components/ui/data-table";
 import { id } from "date-fns/locale";
 import { User } from "../../../../generated/prisma_client";
+import Link from "next/link";
 
 type valuesFilter = {
   agentName: string;
@@ -241,7 +244,7 @@ export default function RekapanScreen({
                   name="deliveryNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg">No DO</FormLabel>
+                      <FormLabel className="text-lg">Nomor DO</FormLabel>
                       <FormControl>
                         <ComboBoxNelsen
                           placeholder="Pilih Nomor DO"
@@ -312,28 +315,44 @@ export default function RekapanScreen({
                   )}
                 />
               </div>
-              <div className="flex w-full sm:w-auto md:justify-end sm:justify-end">
-                <Button
-                  type="submit"
-                  className="flex w-full sm:w-auto items-center mr-2"
-                  disabled={loading}
-                >
-                  <Search className="h-4 w-4 cursor-pointer" />
-                  {loading ? "Loading..." : "Cari"}
-                </Button>
-                {/* {isFiltered && ( */}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="flex items-center justify-center"
-                  onClick={() => {
-                    handleReset();
-                    setIsFiltered(false);
-                  }}
-                >
-                  <X className="h-4 w-4 cursor-pointer" />
-                </Button>
-                {/* )} */}
+
+              <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-3 space-y-2 sm:space-y-0 sm:space-x-2">
+                {user.role === "ADMIN" && (
+                  <div className="w-full sm:w-auto">
+                    <Button
+                      variant="default"
+                      className="w-full sm:w-auto flex items-center justify-center"
+                      asChild
+                    >
+                      <Link href="penyaluran-elpiji/form">
+                        <Plus className="h-4 w-4 mr-2 cursor-pointer" />
+                        <span className="truncate">New Penyaluran Elpiji</span>
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+                <div className="flex w-full sm:w-auto md:justify-end sm:justify-end">
+                  <Button
+                    type="submit"
+                    className="flex w-full sm:w-auto items-center mr-2"
+                    disabled={loading}
+                  >
+                    <Search className="h-4 w-4 cursor-pointer" />
+                    {loading ? "Loading..." : "Cari"}
+                  </Button>
+                  {/* {isFiltered && ( */}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="flex items-center justify-center"
+                    onClick={() => {
+                      handleReset();
+                      setIsFiltered(false);
+                    }}
+                  >
+                    <X className="h-4 w-4 cursor-pointer" />
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>

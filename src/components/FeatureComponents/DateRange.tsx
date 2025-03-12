@@ -74,9 +74,7 @@ export function DatePickerWithRange({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            disabled={(date) =>
-              date > new Date() || date < new Date("2000-01-01")
-            }
+            disabled={(date) => date < new Date("2000-01-01")}
             onSelect={handleDateChange}
             numberOfMonths={2}
             locale={id}

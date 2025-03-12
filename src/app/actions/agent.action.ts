@@ -94,7 +94,7 @@ export const updateAgentData = async (formData: FormData) => {
   const city = formData.get("city")?.toString();
   const phone = formData.get("phone")?.toString();
   const fax = formData.get("fax")?.toString()
-    ? formData.get("shipTo")?.toString()
+    ? formData.get("fax")?.toString()
     : null;
   const agentId = Number(formData.get("agentId"));
 
@@ -120,6 +120,7 @@ export const updateAgentData = async (formData: FormData) => {
         error: "Terdapat nama agent yang sama",
       };
     }
+
 
     // Update data agent
     const updatedAgent = await prisma.agents.update({

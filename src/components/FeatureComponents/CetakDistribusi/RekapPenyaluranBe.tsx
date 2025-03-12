@@ -1,8 +1,7 @@
-"use client";
-import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { formatNumberQty } from "@/utils/page";
+import { id } from "date-fns/locale";
 
 const styles = StyleSheet.create({
   page: {
@@ -57,6 +56,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#f0f0f0",
   },
+  noResultsRow: {
+    flexDirection: "row",
+    minHeight: 50, // Ensure some height for visibility
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noResultsText: {
+    textAlign: "center",
+    fontSize: 12,
+  },
 });
 
 const RekapPenyaluranBe = ({ data, isAgentFiltered }: any) => {
@@ -101,7 +110,9 @@ const RekapPenyaluranBe = ({ data, isAgentFiltered }: any) => {
                 <Text style={{ marginTop: 5 }}>
                   Penyaluran Tanggal:{" "}
                   <Text style={{ fontFamily: "Times-Bold" }}>
-                    {format(item.date, "EEEE, dd MMMM yyyy")}
+                    {format(new Date(item.date), "EEEE, dd MMMM yyyy", {
+                      locale: id,
+                    })}
                   </Text>
                 </Text>
 
@@ -358,9 +369,38 @@ const RekapPenyaluranBe = ({ data, isAgentFiltered }: any) => {
             ))}
           </View>
         ) : (
-          <Text style={{ textAlign: "center", marginTop: 20 }}>
-            Data tidak ditemukan
-          </Text>
+          <View style={{ marginVertical: 20 }}>
+            <View style={styles.table}>
+              {/* Table Header */}
+              <View style={styles.tableRow} wrap={false}>
+                <Text style={[styles.tableCellHeader, { flex: 1.5 }]}>
+                  No Transaksi
+                </Text>
+                <Text style={[styles.tableCellHeader, { flex: 3 }]}>
+                  Nama Agen
+                </Text>
+                <Text style={[styles.tableCellHeader, { flex: 1 }]}>Sopir</Text>
+                <Text style={[styles.tableCellHeader, { flex: 1 }]}>Nopol</Text>
+                <Text style={[styles.tableCellHeader, { flex: 1.5 }]}>
+                  No DO
+                </Text>
+                <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+                  Status
+                </Text>
+                <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+                  Jumlah
+                </Text>
+                <Text style={[styles.tableCellHeader, { flex: 1 }]}>Kg</Text>
+              </View>
+
+              {/* No Results Row */}
+              <View style={styles.noResultsRow} wrap={false}>
+                <Text style={[styles.noResultsText, { flex: 10 }]} wrap={false}>
+                  Data tidak ditemukan
+                </Text>
+              </View>
+            </View>
+          </View>
         )}
 
         <View style={[styles.table, { marginTop: 20 }]}>

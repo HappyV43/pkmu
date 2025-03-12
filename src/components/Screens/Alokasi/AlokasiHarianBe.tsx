@@ -138,6 +138,7 @@ const AlokasiHarianBe = ({
         totalAgen: result.cardInfo.totalAgenCount,
         totalAlokasiHarian: result.cardInfo.totalAlokasiHarian,
       });
+      // console.log(result.data);
       setTableData(result.data);
       setPagination((prev) => ({
         ...prev,
@@ -348,7 +349,7 @@ const AlokasiHarianBe = ({
                         className="w-full sm:w-auto flex items-center justify-center"
                         asChild
                       >
-                        <Link href="alokasi-harian/upload">
+                        <Link href="../alokasi-harian/upload">
                           <Upload className="h-4 w-4 mr-2 cursor-pointer" />
                           <span className="truncate">Upload Alokasi</span>
                         </Link>

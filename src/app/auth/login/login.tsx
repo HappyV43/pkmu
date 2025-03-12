@@ -39,21 +39,23 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: SignInValues) {
-    setIsLoading(true); 
+    setIsLoading(true);
     const result = await signIn(values);
     if (result.error) {
-      setIsLoading(false); 
+      setIsLoading(false);
       toast({
         variant: "destructive",
         title: result.error,
+        duration: 3000,
       });
       router.push("/auth/login");
     } else {
       router.push("/summary");
       toast({
         title: "Login has been successfully",
+        duration: 3000,
       });
-      setIsLoading(false); 
+      setIsLoading(false);
     }
   }
 
@@ -67,7 +69,6 @@ export function LoginForm() {
           <div className="w-20 h-20 bg-primary/10 flex items-center justify-center rounded">
             <div className="text-primary text-xl font-bold">
               <Image src="/icon.svg" width={100} height={100} alt="Icon" />
-              
             </div>
           </div>
         </div>

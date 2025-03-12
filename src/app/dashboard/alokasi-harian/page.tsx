@@ -1,8 +1,9 @@
-import { getAllokasiAll } from "@/app/actions/alokasi.action";
+import {
+  getAllocationDefault,
+  getFilterDataAllocation,
+} from "@/app/actions/alokasi.action";
 import { getCurrentSession } from "@/app/actions/auth.actions";
 import AlokasiHarian from "@/components/Screens/Alokasi/AlokasiHarian";
-import { ContentLayout } from "@/components/ContentLayout";
-import { adminAllocationColumns, allocationColumns } from "@/lib/Column";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -10,23 +11,27 @@ export const metadata = {
 };
 
 const AlokasiPage = async () => {
-  const { session, user } = await getCurrentSession();
+  const [dataBpeDeliveryAgent, sessionData, defaultData] = await Promise.all([
+    getFilterDataAllocation(),
+    getCurrentSession(),
+    getAllocationDefault(),
+  ]);
+  const { user, session } = sessionData;
   if (!session && !user) {
     redirect("/auth/login");
   }
-
   return (
-    // <ContentLayout
-    //   home={"dashboard"}
-    //   mainpage={"alokasi-harian"}
-    //   children={
-        <AlokasiHarian
-          columns={
-            user.role === "ADMIN" ? adminAllocationColumns : allocationColumns
-          }
-          user={user}
-        />
+    <AlokasiHarian
+      user={user}
+      defaultdata={defaultData}
+      dataBpeDeliveryAgent={dataBpeDeliveryAgent}
+    />
+
+    // <AlokasiHarian
+    //   columns={
+    //     user.role === "ADMIN" ? adminAllocationColumns : allocationColumns
     //   }
+    //   user={user}
     // />
   );
 };

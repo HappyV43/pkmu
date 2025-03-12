@@ -58,7 +58,7 @@ const ComboBoxNelsen = <T extends Record<string, any>>({
           <Command>
             <CommandInput placeholder={`Cari data`} className="h-9" />
             <CommandList>
-              <CommandEmpty>No data found.</CommandEmpty>
+            <CommandEmpty>Data tidak ditemukan</CommandEmpty>
               <CommandGroup>
                 {data.map((item, index) => (
                   <CommandItem

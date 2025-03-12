@@ -1,208 +1,190 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ColumnDef } from "@tanstack/react-table";
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import ComboBoxNelsen from "@/components/FeatureComponents/ComboBoxNelsen";
+import {
+  adminLpgDistributionColumns,
+  lpgDistributionColumns,
+} from "@/lib/Column";
+import Pagination from "@/components/FeatureComponents/Pagination";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { CalendarIcon } from "@radix-ui/react-icons";
+import { Calendar } from "@/components/ui/calendar";
+import { format, set } from "date-fns";
+import InfoCard from "@/components/InfoCard";
 import {
   CalendarCheck,
   Database,
   Handshake,
-  Loader2,
   Plus,
-  Printer,
+  Search,
   SearchX,
+  Upload,
   Weight,
+  X,
 } from "lucide-react";
-import {
-  calculateTotalAgen,
-  calculateTotalQty,
-  formatNumberQty,
-  normalizeDateFrom,
-  normalizeDateTo,
-} from "@/utils/page";
-import { format } from "date-fns";
-import { getMonthlyAllocation, getSummary } from "@/app/actions/alokasi.action";
-import { ChartConfig } from "@/components/ui/chart";
-import RekapPenyaluran from "@/components/FeatureComponents/CetakDistribusi/RekapPenyaluran";
-import ComboBox from "@/components/FeatureComponents/ComboBox";
-import { DatePickerWithRange } from "@/components/FeatureComponents/DateRange";
-import { Card } from "@/components/ui/card";
+import { DataTableBackEnd } from "@/components/FeatureComponents/DataTableBackEnd";
 import { DataTable } from "@/components/ui/data-table";
-import { Label } from "@radix-ui/react-label";
-import { Button } from "@/components/ui/button";
-import type { User } from "../../../../generated/prisma_client";
 import { id } from "date-fns/locale";
-import {
-  AllocationData,
-  LpgDistributions,
-  MonthlyAllocation,
-  SummaryProps,
-} from "@/lib/types";
-import DownloadRekap from "./DownloadRekap";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import InfoCard from "@/components/InfoCard";
-import { getAllLpg } from "@/app/actions/lpg-distribution.action";
+import { User } from "../../../../generated/prisma_client";
+import Link from "next/link";
 
-interface DistributionProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  user: User;
-}
-
-const today = {
-  from: new Date(),
-  to: new Date(),
+type valuesFilter = {
+  agentName: string;
+  deliveryNumber: string;
+  range: any;
 };
 
-var isFiltered = false;
-const PenyaluranElpiji = <TData extends LpgDistributions, TValue>({
-  columns,
+type bpeNumberData = {
+  agentName: string;
+  deliveryNumber: string;
+};
+
+export default function PenyaluranElpiji({
   user,
-}: DistributionProps<TData, TValue>) => {
-  const [rawData, setRawData] = useState<TData[]>([]);
-  const [notrans, setnotrans] = useState("");
+  dataBpeDeliveryAgent,
+  defaultData,
+}: {
+  user: User;
+  dataBpeDeliveryAgent: bpeNumberData[];
+  defaultData: any[];
+}) {
+  const uniqueAgents = [
+    ...new Set(defaultData.map((allocation: any) => allocation.agentName)),
+  ];
 
-  // BUAT REKAP
-  // const [isAgentFiltered, setIsAgentFiltered] = useState(false);
+  const totalQty = useMemo(
+    () =>
+      defaultData.reduce(
+        (sum: any, allocation: any) => sum + Number(allocation.allocatedQty),
+        0
+      ),
+    [defaultData]
+  );
 
-  const [agentName, setAgentName] = useState("");
-  const [doNumber, setDoNumber] = useState("");
-  const [dateFilter, setDateFilter] = useState<{
-    from: Date | null;
-    to: Date | null;
-  } | null>({ from: new Date(), to: null });
+  const totalBeratQty = useMemo(() => totalQty * 3, [totalQty]);
 
-  const [filteredData, setFilteredData] = useState<TData[]>([]);
-  const [filtered, setFiltered] = useState<Boolean>(false);
+  const formattedTotalQty = totalQty.toLocaleString("id-ID");
+  const formattedTotalBeratQty = totalBeratQty.toLocaleString("id-ID");
 
-  // BUAT REKAP
-  // const [allocationDaily, setAllocationDaily] = useState<{giDate: Date | null, qty: number | undefined}[]>([]);
-  // const [allocationMonthly, setAllocationMonthly] = useState<{giDate: Date | null, allocatedQty: number | undefined[]}[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isFiltered, setIsFiltered] = useState(true);
+  const [paginationLoading, setPaginationLoading] = useState(false);
+  const [tableData, setTableData] = useState(defaultData);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 15,
+    total: 0,
+    totalPages: defaultData.length > 15 ? 2 : 1,
+  });
+  const [data, setData] = useState({
+    totalTabung: formattedTotalQty,
+    totalBeratTabung: formattedTotalBeratQty,
+    totalAgen: uniqueAgents.length,
+    totalAlokasiHarian: defaultData.length,
+  });
 
-  const generateOptions = () => {
-    const notransOptions = Array.from(
-      new Set(rawData.map((item) => item.bpeNumber))
-    ).map((bpeNumber) => ({
-      label: bpeNumber,
-      value: bpeNumber,
-    }));
+  const form = useForm<valuesFilter>({
+    defaultValues: {
+      agentName: "",
+      deliveryNumber: "",
+      range: {
+        from: new Date(),
+        to: null,
+      },
+    },
+  });
 
-    const agentNameOptions = Array.from(
-      new Set(rawData.map((item) => item.agentName))
-    ).map((agentName) => ({
-      label: agentName,
-      value: agentName,
-    }));
+  async function fetchData(values: valuesFilter, pageNumber: number) {
+    setIsFiltered(true);
+    setPaginationLoading(true);
+    try {
+      const { from, to } = values.range || {};
+      const response = await fetch("/api/penyaluran-elpiji", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...values,
+          range: {
+            from: from ? format(new Date(from), "yyyy-MM-dd") : null,
+            to: to ? format(new Date(to), "yyyy-MM-dd") : null,
+          },
+          page: pageNumber,
+          pageSize: pagination.pageSize,
+        }),
+      });
+      const result = await response.json();
+      setData({
+        totalTabung: result.cardInfo.totalQty.toLocaleString("id-ID"),
+        totalBeratTabung: result.cardInfo.totalBeratQty.toLocaleString("id-ID"),
+        totalAgen: result.cardInfo.totalAgenCount,
+        totalAlokasiHarian: result.cardInfo.totalDistribusi,
+      });
+      setTableData(result.data);
+      setPagination((prev) => ({
+        ...prev,
+        page: pageNumber,
+        total: result.pagination.total,
+        totalPages: result.pagination.totalPages,
+      }));
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setPaginationLoading(false);
+    }
+  }
 
-    const doNumberOptions = Array.from(
-      new Set(rawData.map((item) => item.deliveryNumber))
-    ).map((deliveryNumber) => ({
-      label: deliveryNumber,
-      value: deliveryNumber,
-    }));
+  // Fungsi untuk submit dengan loading
+  async function onSubmit(values: valuesFilter) {
+    setLoading(true);
+    await fetchData(values, 1);
+    setLoading(false);
+  }
 
-    return { notransOptions, agentNameOptions, doNumberOptions };
-  };
+  function handlePageChange(newPage: number) {
+    fetchData(form.getValues(), newPage);
+  }
 
-  const { notransOptions, agentNameOptions, doNumberOptions } =
-    generateOptions();
-
-  const applyFilter = () => {
-    const filtered = rawData.filter((item) => {
-      const matchesNoTrans = notrans ? item.bpeNumber === notrans : true;
-      const matchesAgentName = agentName ? item.agentName === agentName : true;
-      const matchesDoNumber = doNumber
-        ? item.deliveryNumber === doNumber
-        : true;
-
-      const matchesDate = dateFilter?.from
-        ? dateFilter?.to
-          ? // For Range Dates
-            item.giDate >= normalizeDateFrom(dateFilter.from) &&
-            item.giDate <= normalizeDateTo(dateFilter.to)
-          : // For Single Dates
-            item.giDate >= normalizeDateFrom(dateFilter.from) &&
-            item.giDate <= normalizeDateTo(dateFilter.from)
-        : (dateFilter?.from == new Date() && dateFilter?.to == null) ||
-          dateFilter?.to == new Date()
-        ? normalizeDateFrom(item.giDate) === normalizeDateTo(new Date())
-        : true;
-
-      return (
-        matchesNoTrans && matchesAgentName && matchesDate && matchesDoNumber
-      );
+  // Reset form and fetch all data
+  function handleReset() {
+    form.reset({
+      agentName: "",
+      deliveryNumber: "",
+      range: {
+        from: null,
+        to: null,
+      },
     });
 
-    // console.log(filtered)
-    setFilteredData(filtered);
-    isFiltered =
-      notrans !== "" ||
-      agentName !== "" ||
-      doNumber !== "" ||
-      dateFilter?.to === new Date() ||
-      dateFilter !== null;
-    // setFiltered(
-    //   notrans !== "" ||
-    //   agentName !== "" ||
-    //   doNumber !== "" ||
-    //   (dateFilter === today || dateFilter !==null)
+    // fetchData(
+    //   {
+    //     agentName: "",
+    //     deliveryNumber: "",
+    //     range: {
+    //       from: null,
+    //       to: null,
+    //     },
+    //   },
+    //   1
     // );
-
-    console.log(filtered);
-    console.log("matchesAgentName:", " >", agentName, agentName === "");
-    console.log("matchesDoNumber:", " >", doNumber, doNumber === "");
-    console.log("matchesDate:", " >", dateFilter, dateFilter !== null);
-    console.log("matchesDate From:", dateFilter?.from);
-    console.log("matchesDate To:", dateFilter?.to);
-  };
-
-  useEffect(() => {
-    applyFilter();
-  }, [notrans, agentName, doNumber, dateFilter, rawData]);
-
-  // BUAT REKAP
-  // useEffect(() => {
-  //   setIsAgentFiltered(!!agentName);
-  // }, [agentName]);
-
-  const loadAllData = async () => {
-    // DISTRIBUTION
-    const dataLPG = (await getAllLpg()) as TData[];
-    setRawData(dataLPG);
-
-    // ALLOCATION
-    const { data } = await getSummary();
-    const dailyData = data.map((item: AllocationData) => ({
-      giDate: item.plannedGiDate,
-      qty: item.allocatedQty,
-    }));
-    // setAllocationDaily(dailyData); // BUAT REKAP
-
-    // MONTHLY
-    const dataMontly = (await getMonthlyAllocation()) as MonthlyAllocation[];
-    const monthlyData = dataMontly.map((item) => ({
-      giDate: item.date,
-      allocatedQty: item.totalElpiji,
-    }));
-    // setAllocationMonthly(monthlyData); //BUAT REKAP
-
-    // applyFilter()
-  };
-
-  useEffect(() => {
-    isFiltered = true;
-    setFiltered(true);
-    loadAllData();
-  }, []);
-
-  const handleClearSearch = () => {
-    setAgentName("");
-    setDoNumber("");
-    setnotrans("");
-
-    setDateFilter(null);
-    setFiltered(false);
-    loadAllData();
-  };
+    setIsFiltered(false);
+  }
 
   return (
     <div className="mx-5">
@@ -211,147 +193,190 @@ const PenyaluranElpiji = <TData extends LpgDistributions, TValue>({
           <InfoCard
             icon={<CalendarCheck className="h-10 w-10 text-white" />}
             title="TOTAL TABUNG"
-            value={formatNumberQty(
-              calculateTotalQty(filteredData, "distributionQty")
-            )}
+            value={data.totalTabung}
           />
           <InfoCard
             icon={<Weight className="h-10 w-10 text-white" />}
             title="TOTAL BERAT TABUNG"
-            value={formatNumberQty(
-              calculateTotalQty(filteredData, "distributionQty") * 3
-            )}
+            value={data.totalBeratTabung}
             unit="Kg"
           />
           <InfoCard
             icon={<Handshake className="h-10 w-10 text-white" />}
             title="TOTAL AGEN"
-            value={calculateTotalAgen(filteredData)}
+            value={data.totalAgen}
           />
           <InfoCard
             icon={<Database className="h-10 w-10 text-white" />}
             title="TOTAL DISTRIBUSI LPG"
-            value={filteredData.length}
+            value={data.totalAlokasiHarian}
           />
         </div>
         <Card className="px-6 py-6 my-3 shadow-lg rounded-2xl bg-white border border-gray-200">
           <div className="px-4 text-center">
-            <h1 className="text-lg font-semibold py-2 pb-4">
-              Filter Penyaluran Elpiji
-            </h1>
+            <h1 className="text-lg font-semibold py-2 pb-4">Filter Rekap</h1>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4">
-            <div>
-              <Label htmlFor="notrans-search" className="text-lg">
-                Nomer Transaksi
-              </Label>
-              <ComboBox
-                data={notransOptions}
-                value={notrans}
-                setValue={setnotrans}
-                placeholder="Semua nomor BPE"
-              />
-            </div>
-            <div>
-              <Label htmlFor="agent-search" className="text-lg">
-                Name Agen
-              </Label>
-              <ComboBox
-                data={agentNameOptions}
-                value={agentName}
-                setValue={setAgentName}
-                placeholder="Semua agen"
-              />
-            </div>
-            <div>
-              <Label htmlFor="do-search" className="text-lg">
-                Nomer DO
-              </Label>
-              <ComboBox
-                data={doNumberOptions}
-                value={doNumber}
-                setValue={setDoNumber}
-                placeholder="Semua number DO"
-              />
-            </div>
-            <div>
-              <Label htmlFor="date-search" className="text-lg">
-                Tanggal
-              </Label>
-              <DatePickerWithRange
-                value={dateFilter}
-                onDateChange={setDateFilter}
-                placeholder={
-                  dateFilter == null
-                    ? "Semua Tanggal"
-                    : `${format(new Date(), "dd MMMM yyyy", { locale: id })}`
-                }
-              />
-            </div>
-          </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols- mb-4">
+                <FormField
+                  control={form.control}
+                  name="agentName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg">Nama Agen</FormLabel>
+                      <FormControl>
+                        <ComboBoxNelsen
+                          placeholder="Pilih Nama Agen"
+                          data={dataBpeDeliveryAgent}
+                          selectedValue={field.value}
+                          onSelect={field.onChange}
+                          valueKey="agentName"
+                          displayKey="agentName"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {/* <FormField
+                  control={form.control}
+                  name="deliveryNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg">Nomor DO</FormLabel>
+                      <FormControl>
+                        <ComboBoxNelsen
+                          placeholder="Pilih Nomor DO"
+                          data={dataBpeDeliveryAgent}
+                          selectedValue={field.value}
+                          onSelect={field.onChange}
+                          valueKey="deliveryNumber"
+                          displayKey="deliveryNumber"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                /> */}
+                <FormField
+                  control={form.control}
+                  name="range"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="block text-lg">Tanggal</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal my-2",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon />
+                            {field.value?.from ? (
+                              field.value?.to ? (
+                                <>
+                                  {format(field.value.from, "PPP", {
+                                    locale: id,
+                                  })}{" "}
+                                  -{" "}
+                                  {format(field.value.to, "PPP", {
+                                    locale: id,
+                                  })}
+                                </>
+                              ) : (
+                                format(field.value.from, "PPP", {
+                                  locale: id,
+                                })
+                              )
+                            ) : (
+                              <span>Pilih Tanggal</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            initialFocus
+                            mode="range"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("2000-01-01")
+                            }
+                            numberOfMonths={2}
+                            locale={id}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-          <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-3 space-y-2 sm:space-y-0 sm:space-x-2">
-            {user.role === "ADMIN" && (
-              <div className="flex flex-col sm:flex-row sm:space-x-2 w-full sm:w-auto space-y-2 sm:space-y-0">
-                <Button
-                  variant="default"
-                  className="w-full sm:w-auto flex items-center justify-center"
-                  asChild
-                >
-                  <Link href="penyaluran-elpiji/form">
-                    <Plus className="h-4 w-4 mr-2 cursor-pointer" />
-                    <span className="truncate">New Penyaluran Elpiji</span>
-                  </Link>
-                </Button>
-
-                {/* <Button
-                  variant="default"
-                  className="w-full sm:w-auto flex items-center justify-center"
-                  asChild
-                >
-                  <PDFDownloadLink
-                    className="text-center"
-                    document={
-                      <RekapPenyaluran
-                        data={filteredData}
-                        data2={allocationMonthly}
-                        data3={allocationDaily}
-                        isAgentFiltered={isAgentFiltered}
-                      />
-                    }
-                    fileName={`Rekap Penyaluran Elpiji.pdf`}
+              <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-3 space-y-2 sm:space-y-0 sm:space-x-2">
+                {user.role === "ADMIN" && (
+                  <div className="w-full sm:w-auto">
+                    <Button
+                      variant="default"
+                      className="w-full sm:w-auto flex items-center justify-center"
+                      asChild
+                    >
+                      <Link href="penyaluran-elpiji/form">
+                        <Plus className="h-4 w-4 mr-2 cursor-pointer" />
+                        <span className="truncate">New Penyaluran Elpiji</span>
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+                <div className="flex w-full sm:w-auto md:justify-end sm:justify-end">
+                  <Button
+                    type="submit"
+                    className="flex w-full sm:w-auto items-center mr-2"
+                    disabled={loading}
                   >
-                    <Printer className="h-4 w-4 text-green-500 cursor-pointer mr-2" />
-                    <span className="truncate">Cetak Rekap</span>
-                  </PDFDownloadLink>
-                </Button> */}
+                    <Search className="h-4 w-4 cursor-pointer" />
+                    {loading ? "Loading..." : "Cari"}
+                  </Button>
+                  {/* {isFiltered && ( */}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="flex items-center justify-center"
+                    onClick={() => {
+                      handleReset();
+                      setIsFiltered(false);
+                    }}
+                  >
+                    <X className="h-4 w-4 cursor-pointer" />
+                  </Button>
+                </div>
               </div>
-            )}
-
-            {/* Reset Button */}
-            {filtered && (
-              <div className="w-full sm:w-auto">
-                <Button
-                  variant="destructive"
-                  className="w-full sm:w-auto flex items-center justify-center"
-                  onClick={() => {
-                    setDateFilter(null);
-                    setFiltered(false);
-                    isFiltered = !isFiltered;
-                    handleClearSearch();
-                  }}
-                >
-                  <SearchX className="h-4 w-4 mr-2 cursor-pointer" />
-                  <span className="truncate">Reset</span>
-                </Button>
-              </div>
-            )}
-          </div>
+            </form>
+          </Form>
         </Card>
-        <DataTable columns={columns} data={filteredData} />
+        <div>
+          <DataTableBackEnd
+            columns={
+              user.role === "ADMIN"
+                ? adminLpgDistributionColumns
+                : lpgDistributionColumns
+            }
+            data={tableData}
+            onPageChange={handlePageChange}
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+          />
+          {/* <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+            loading={paginationLoading}
+          /> */}
+        </div>
       </div>
     </div>
   );
-};
-
-export default PenyaluranElpiji;
+}

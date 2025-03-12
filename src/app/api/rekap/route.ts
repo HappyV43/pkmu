@@ -8,6 +8,8 @@ export async function POST(req: NextRequest) {
     const { agentName, deliveryNumber, range } = body;
 
     const whereConditions: any = {};
+    let fromDate = range.from ? new Date(range.from) : null;
+    let toDate = range.to ? new Date(range.to) : null;
 
     if (agentName) {
       whereConditions.agentName = {
@@ -23,8 +25,8 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    if (range?.from) {
-      const start = new Date(range.from);
+    if (fromDate) {
+      const start = new Date(fromDate);
       if (isNaN(start.getTime())) {
         return NextResponse.json(
           { message: "Invalid date format" },
@@ -36,8 +38,8 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    if (range?.to) {
-      const end = new Date(range.to);
+    if (toDate) {
+      const end = new Date(toDate);
       if (isNaN(end.getTime())) {
         return NextResponse.json(
           { message: "Invalid date format" },
@@ -47,6 +49,12 @@ export async function POST(req: NextRequest) {
       whereConditions.giDate = {
         ...whereConditions.giDate,
         lte: new Date(end.setHours(23, 59, 59, 999)),
+      };
+    } else if (fromDate && !toDate) {
+      // Jika hanya ada fromDate, ambil data untuk hari itu saja
+      whereConditions.giDate = {
+        gte: new Date(fromDate.setHours(0, 0, 0, 0)),
+        lte: new Date(fromDate.setHours(23, 59, 59, 999)),
       };
     }
 
@@ -66,8 +74,6 @@ export async function POST(req: NextRequest) {
         distributionQty: true,
         volume: true,
         driverName: true,
-        bocor: true,
-        isiKurang: true,
         allocationId: true, // Tambahkan allocationId untuk mencocokkan data
       },
     });
@@ -75,11 +81,11 @@ export async function POST(req: NextRequest) {
     const allocationData = await prisma.allocations.findMany({
       where: {
         id: {
-          in: filteredData.map((d) => d.allocationId), 
+          in: filteredData.map((d) => d.allocationId),
         },
       },
       select: {
-        id: true, 
+        id: true,
         materialName: true,
       },
     });
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest) {
     const allocationMap = new Map(
       allocationData.map((item) => [
         item.id,
-        item.materialName.includes("REFILL") ? "REFILL" : item.materialName, 
+        item.materialName.includes("REFILL") ? "REFILL" : item.materialName,
       ])
     );
 
@@ -96,7 +102,6 @@ export async function POST(req: NextRequest) {
       ...item,
       materialName: allocationMap.get(item.allocationId) || null, // Tambahkan materialName
     }));
-
 
     const monthlyData = await prisma.monthlyAllocations.findMany({
       where: {

@@ -45,6 +45,7 @@ export default function UploadAlokasiBulanan({
           title:
             "Jenis file tidak valid. Harap unggah file dengan format .xlsx atau .xls.",
           variant: "destructive",
+          duration: 3000,
         });
         return;
       }
@@ -55,6 +56,7 @@ export default function UploadAlokasiBulanan({
           title:
             "Ukuran file melebihi 2 MB. Harap unggah file yang lebih kecil.",
           variant: "destructive",
+          duration: 3000,
         });
         return;
       }
@@ -102,6 +104,7 @@ export default function UploadAlokasiBulanan({
               ", "
             )}. Harap periksa format file Anda.`,
             variant: "destructive",
+            duration: 3000,
           });
           return;
         }
@@ -114,6 +117,7 @@ export default function UploadAlokasiBulanan({
               title: "Gagal",
               description: "Data tidak valid, ada nilai yang kosong/undefiend.",
               variant: "destructive",
+              duration: 3000,
             });
           }
           return {
@@ -144,12 +148,14 @@ export default function UploadAlokasiBulanan({
           title: "Gagal",
           description: result.error,
           variant: "destructive",
+          duration: 3000,
         });
       } else {
         setLoading(false);
         toast({
           title: "Berhasil",
           description: "Alokasi Bulanan berhasil ditambahkan",
+          duration: 3000,
         });
         router.push("/dashboard/alokasi-bulanan/");
       }
@@ -161,6 +167,7 @@ export default function UploadAlokasiBulanan({
             ? "Harap pilih file untuk diunggah."
             : "Data tidak ditemukan. Harap periksa format file.",
         variant: "destructive",
+        duration: 3000,
       });
     }
   };
@@ -169,6 +176,7 @@ export default function UploadAlokasiBulanan({
     toast({
       variant: "destructive",
       title: "Hanya admin yang bisa akses",
+      duration: 3000,
     });
     redirect("/dashboard/penyaluran-elpiji");
   }

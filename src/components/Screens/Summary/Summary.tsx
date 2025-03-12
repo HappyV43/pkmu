@@ -9,19 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChartConfig } from "@/components/ui/chart";
-import { endOfWeek, format, startOfWeek } from "date-fns";
-import React, { useEffect, useRef, useState } from "react";
-import {
-  calcSummary,
-  calculateDiff,
-  calculateSummaryQty,
-  formatNumberQty,
-  getAnnualTotalQty,
-  getTodayTotalQty,
-  getWeeklyTotalQty,
-  normalizeDateFrom,
-  normalizeDateTo,
-} from "@/utils/page";
+import { format } from "date-fns";
+import React, { useRef, useState } from "react";
+import { normalizeDateFrom, normalizeDateTo } from "@/utils/page";
 import { id } from "date-fns/locale";
 import {
   CalendarCheck,
@@ -30,24 +20,22 @@ import {
   ChartSpline,
   Clock4,
   Download,
+  Loader2,
   PackagePlus,
   ScrollText,
-  SearchX,
   X,
 } from "lucide-react";
 import { DatePickerWithRange } from "@/components/FeatureComponents/DateRange";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import SummaryItems from "@/components/FeatureComponents/SummaryItems";
 import html2canvas from "html2canvas";
 
-import { getSummary } from "@/app/actions/alokasi.action";
 import { AllocationData, DataConfig } from "@/lib/types";
 import { Prisma } from "../../../../generated/prisma_client";
 import {
   allDataDefault,
   getSummaryToday,
   getWeeklySummaryDefault,
-  getYearlySummaryData,
 } from "@/app/actions/summary.action";
 
 // 🟢 Ambil otomatis tipe return dari getSummaryToday
@@ -72,6 +60,7 @@ const Summary = ({ defaultdata, weekly, yearly, allData }: SummaryProps) => {
   const [dailyDistribution, setDailyDistribution] = useState<DataConfig[]>([]);
 
   // Filtering Data
+  const [loading, setLoading] = useState<Boolean>(false);
   const [isFiltered, setIsFiltered] = useState<Boolean>(false);
   const [dateFilter, setDateFilter] = useState<{
     from: Date | null;
@@ -299,20 +288,74 @@ const Summary = ({ defaultdata, weekly, yearly, allData }: SummaryProps) => {
     }
   };
 
-  const chartConfig = {
-    monthlyQty: {
-      label: "Bulanan",
-      color: "hsl(var(--chart-1))",
-    },
-    dailyQty: {
-      label: "Harian",
-      color: "hsl(var(--chart-2))",
-    },
-    distributionQty: {
-      label: "Penyaluran LPG",
-      color: "hsl(var(--chart-3))",
-    },
-  } satisfies ChartConfig;
+  const fetchFilteredSummary = async (
+    tgl: { from: Date | null; to: Date | null } | null
+  ) => {
+    if (!tgl) return;
+
+    setDateFilter(tgl);
+    setIsFiltered(true);
+    setLoading(true);
+    // console.log("Selected Date Range:", tgl);
+
+    try {
+      const response = await fetch("/api/filter-summary", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: tgl.from,
+          to: tgl.to,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API responded with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      // console.log("Response from API route:", data);
+
+      const allData = {
+        allSummary: {
+          _count: {
+            _all: data?.dailySummary?._count?._all ?? 0,
+          },
+          _sum: {
+            allocatedQty: data?.dailySummary?._sum?.allocatedQty ?? 0,
+          },
+        },
+        allDistributionSummary: {
+          _count: {
+            _all: data?.distributionSummary?._count?._all ?? 0,
+          },
+          _sum: {
+            distributionQty:
+              data?.distributionSummary?._sum?.distributionQty ?? 0,
+          },
+        },
+        allMonthlyData: {
+          _count: {
+            _all: data?.monthlyData?._count?._all ?? 0,
+          },
+          _sum: {
+            totalElpiji: data?.monthlyData?._sum?.totalElpiji ?? 0,
+          },
+        },
+        pending: data?.pending ?? 0,
+        fakultatif: data?.fakultatif ?? 0,
+        tidakTembus: data?.tidakTembus ?? 0,
+        average: data?.average ?? 0,
+      };
+
+      setAllDataSummary(allData);
+    } catch (error) {
+      console.error("Error sending date range:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="mx-5">
@@ -334,14 +377,6 @@ const Summary = ({ defaultdata, weekly, yearly, allData }: SummaryProps) => {
             </span>
           </h1>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-3 justify-between">
-            {/* <SummaryItems
-              icon={<CalendarCheck className="h-10 w-10 text-white" />}
-              title={`ALOKASI HARIAN`}
-              value={`${formatNumberQty(getTodayTotalQty(dailyAllocation))} / `}
-              additionalInfo={`${formatNumberQty(
-                getTodayTotalQty(dailyAllocation) * 3
-              )} Kg`}
-            /> */}
             <SummaryItems
               icon={<CalendarCheck className="h-10 w-10 text-white" />}
               title={`ALOKASI HARIAN`}
@@ -361,17 +396,6 @@ const Summary = ({ defaultdata, weekly, yearly, allData }: SummaryProps) => {
               } Kg`}
             />
 
-            {/* <SummaryItems
-              icon={<CalendarDays className="h-10 w-10 text-white" />}
-              title={`ALOKASI BULANAN`}
-              value={`${formatNumberQty(
-                getTodayTotalQty(monthlyAllocation)
-              )} / `}
-              additionalInfo={`${formatNumberQty(
-                getTodayTotalQty(monthlyAllocation) * 3
-              )} Kg`}
-            /> */}
-
             <SummaryItems
               icon={<CalendarDays className="h-10 w-10 text-white" />}
               title={`ALOKASI BULANAN`}
@@ -382,17 +406,6 @@ const Summary = ({ defaultdata, weekly, yearly, allData }: SummaryProps) => {
                 "id-ID"
               )} Kg`}
             />
-
-            {/* <SummaryItems
-              icon={<ScrollText className="h-10 w-10 text-white" />}
-              title={`PENYALURAN LPG`}
-              value={`${formatNumberQty(
-                getTodayTotalQty(dailyDistribution)
-              )} / `}
-              additionalInfo={`${formatNumberQty(
-                getTodayTotalQty(dailyDistribution) * 3
-              )} Kg`}
-            /> */}
 
             <SummaryItems
               icon={<ScrollText className="h-10 w-10 text-white" />}
@@ -413,60 +426,27 @@ const Summary = ({ defaultdata, weekly, yearly, allData }: SummaryProps) => {
               } Kg`}
             />
 
-            {/* <SummaryItems
-              icon={<Clock4 className="h-10 w-10 text-white" />}
-              title={"PENDING HARIAN"}
-              value={`${formatNumberQty(
-                calcSummary(dailyAllocation, dailyDistribution)
-              )} / `}
-              additionalInfo={`${formatNumberQty(
-                calcSummary(dailyAllocation, dailyDistribution) * 3
-              )} Kg`}
-            /> */}
-
             <SummaryItems
               icon={<Clock4 className="h-10 w-10 text-white" />}
-              title={"PENDING HARIAN BETA"}
+              title={"PENDING HARIAN"}
               value={`${summaryData?.pending.toLocaleString("id-ID")} / `}
               additionalInfo={`${(
                 (summaryData?.pending ?? 0) * 3
               ).toLocaleString("id-ID")} Kg`}
             />
 
-            {/* <SummaryItems
-              icon={<PackagePlus className="h-10 w-10 text-white" />}
-              title={"FAKULTATIF"}
-              value={`${formatNumberQty(
-                calcSummary(dailyAllocation, monthlyAllocation)
-              )} / `}
-              additionalInfo={`${formatNumberQty(
-                calcSummary(dailyAllocation, monthlyAllocation) * 3
-              )} Kg`}
-            /> */}
-
             <SummaryItems
               icon={<PackagePlus className="h-10 w-10 text-white" />}
-              title={"TOTAL FAKULTATIF BETA"}
+              title={"TOTAL FAKULTATIF"}
               value={`${summaryData?.fakultatif.toLocaleString("id-ID")} / `}
               additionalInfo={`${(
                 (summaryData?.fakultatif ?? 0) * 3
               ).toLocaleString("id-ID")} Kg`}
             />
 
-            {/* <SummaryItems
-              icon={<CalendarX2 className="h-10 w-10 text-white" />}
-              title={"ALOKASI TIDAK DITEBUS"}
-              value={`${formatNumberQty(
-                calcSummary(monthlyAllocation, dailyAllocation)
-              )} / `}
-              additionalInfo={`${formatNumberQty(
-                calcSummary(monthlyAllocation, dailyAllocation) * 3
-              )} Kg`}
-            /> */}
-
             <SummaryItems
               icon={<CalendarX2 className="h-10 w-10 text-white" />}
-              title={"TOTAL ALOKASI TIDAK DITEBUS BETA"}
+              title={"TOTAL ALOKASI TIDAK DITEBUS"}
               value={`${summaryData?.tidakTembus.toLocaleString("id-ID")} / `}
               additionalInfo={`${(
                 (summaryData?.tidakTembus ?? 0) * 3
@@ -502,65 +482,7 @@ const Summary = ({ defaultdata, weekly, yearly, allData }: SummaryProps) => {
                 <DatePickerWithRange
                   value={dateFilter}
                   onDateChange={(txt) => {
-                    setDateFilter(txt);
-                    setIsFiltered(true);
-
-                    console.log("Selected Date Range:", txt);
-
-                    fetch("/api/filter-summary", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        from: txt?.from,
-                        to: txt?.to,
-                      }),
-                    })
-                      .then((res) => res.json())
-                      .then((data) => {
-                        console.log("Response from API route:", data);
-                        const allData = {
-                          allSummary: {
-                            _count: {
-                              _all: data.dailySummary._count?.allocatedQty ?? 0,
-                            },
-                            _sum: {
-                              allocatedQty:
-                                data.dailySummary._sum?.allocatedQty ?? 0,
-                            },
-                          },
-                          allDistributionSummary: {
-                            _count: {
-                              _all:
-                                data.distributionSummary._count
-                                  ?.distributionQty ?? 0,
-                            },
-                            _sum: {
-                              distributionQty:
-                                data.distributionSummary._sum
-                                  ?.distributionQty ?? 0,
-                            },
-                          },
-                          allMonthlyData: {
-                            _count: {
-                              _all: data.monthlyData._count?.totalElpiji ?? 0,
-                            },
-                            _sum: {
-                              totalElpiji:
-                                data.monthlyData._sum?.totalElpiji ?? 0,
-                            },
-                          },
-                          pending: data.pending,
-                          fakultatif: data.fakultatif,
-                          tidakTembus: data.tidakTembus,
-                          average: data.average,
-                        };
-                        setAllDataSummary(allData);
-                      })
-                      .catch((error) => {
-                        console.error("Error sending date range:", error);
-                      });
+                    fetchFilteredSummary(txt);
                   }}
                   placeholder={
                     dateFilter?.from && dateFilter?.to
@@ -586,95 +508,107 @@ const Summary = ({ defaultdata, weekly, yearly, allData }: SummaryProps) => {
                   className="flex items-center justify-center flex-2"
                 >
                   <X className="h-5 w-5 cursor-pointer" />
-                  {/* <span className="truncate">Reset</span> */}
                 </Button>
               )}
             </div>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-3 justify-between">
-            <SummaryItems
-              icon={<CalendarCheck className="h-10 w-10 text-white" />}
-              title={`TOTAL ALOKASI HARIAN (${allDataSummary.allSummary._count._all.toLocaleString(
-                "id-ID"
-              )})`}
-              value={`${(
-                allDataSummary.allSummary._sum.allocatedQty ?? 0
-              ).toLocaleString("id-ID")} / `}
-              additionalInfo={`${(
-                (allDataSummary.allSummary._sum.allocatedQty ?? 0) * 3
-              ).toLocaleString("id-ID")} Kg`}
-              cs={"p-4"}
-            />
-            <SummaryItems
-              icon={<CalendarDays className="h-10 w-10 text-white" />}
-              title={`TOTAL ALOKASI BULANAN(${allDataSummary.allMonthlyData._count._all.toLocaleString(
-                "id-ID"
-              )})`}
-              value={`${(
-                allDataSummary.allMonthlyData._sum.totalElpiji ?? 0
-              ).toLocaleString("id-ID")} / `}
-              additionalInfo={`${(
-                (allDataSummary.allMonthlyData._sum.totalElpiji ?? 0) * 3
-              ).toLocaleString("id-ID")} Kg`}
-              cs={"p-4"}
-            />
+            {loading ? (
+              <div className="col-span-full flex justify-center items-center h-64">
+                <Loader2 className="h-16 w-16 animate-spin text-gray-500" />
+              </div>
+            ) : (
+              <>
+                <SummaryItems
+                  icon={<CalendarCheck className="h-10 w-10 text-white" />}
+                  title={`TOTAL ALOKASI HARIAN (${allDataSummary.allSummary._count._all.toLocaleString(
+                    "id-ID"
+                  )})`}
+                  value={`${(
+                    allDataSummary.allSummary._sum.allocatedQty ?? 0
+                  ).toLocaleString("id-ID")} / `}
+                  additionalInfo={`${(
+                    (allDataSummary.allSummary._sum.allocatedQty ?? 0) * 3
+                  ).toLocaleString("id-ID")} Kg`}
+                  cs={"p-4"}
+                />
+                <SummaryItems
+                  icon={<CalendarDays className="h-10 w-10 text-white" />}
+                  title={`TOTAL ALOKASI BULANAN(${allDataSummary.allMonthlyData._count._all.toLocaleString(
+                    "id-ID"
+                  )})`}
+                  value={`${(
+                    allDataSummary.allMonthlyData._sum.totalElpiji ?? 0
+                  ).toLocaleString("id-ID")} / `}
+                  additionalInfo={`${(
+                    (allDataSummary.allMonthlyData._sum.totalElpiji ?? 0) * 3
+                  ).toLocaleString("id-ID")} Kg`}
+                  cs={"p-4"}
+                />
 
-            <SummaryItems
-              icon={<ScrollText className="h-10 w-10 text-white" />}
-              title={`TOTAL PENYALURAN LPG (${allDataSummary.allDistributionSummary._count._all.toLocaleString(
-                "id-ID"
-              )})`}
-              value={`${(
-                allDataSummary.allDistributionSummary._sum.distributionQty ?? 0
-              ).toLocaleString("id-ID")} / `}
-              additionalInfo={`${(
-                (allDataSummary.allDistributionSummary._sum.distributionQty ??
-                  0) * 3
-              ).toLocaleString("id-ID")} Kg`}
-              cs={"p-4"}
-            />
+                <SummaryItems
+                  icon={<ScrollText className="h-10 w-10 text-white" />}
+                  title={`TOTAL PENYALURAN LPG (${allDataSummary.allDistributionSummary._count._all.toLocaleString(
+                    "id-ID"
+                  )})`}
+                  value={`${(
+                    allDataSummary.allDistributionSummary._sum
+                      .distributionQty ?? 0
+                  ).toLocaleString("id-ID")} / `}
+                  additionalInfo={`${(
+                    (allDataSummary.allDistributionSummary._sum
+                      .distributionQty ?? 0) * 3
+                  ).toLocaleString("id-ID")} Kg`}
+                  cs={"p-4"}
+                />
 
-            <SummaryItems
-              icon={<Clock4 className="h-10 w-10 text-white" />}
-              title={"TOTAL PENDING HARIAN"}
-              value={`${allDataSummary.pending.toLocaleString("id-ID")} / `}
-              additionalInfo={`${(allDataSummary.pending * 3).toLocaleString(
-                "id-ID"
-              )} Kg`}
-              cs={"p-4"}
-            />
+                <SummaryItems
+                  icon={<Clock4 className="h-10 w-10 text-white" />}
+                  title={"TOTAL PENDING HARIAN"}
+                  value={`${allDataSummary.pending.toLocaleString("id-ID")} / `}
+                  additionalInfo={`${(
+                    allDataSummary.pending * 3
+                  ).toLocaleString("id-ID")} Kg`}
+                  cs={"p-4"}
+                />
 
-            <SummaryItems
-              icon={<PackagePlus className="h-10 w-10 text-white" />}
-              title={"TOTAL FAKULTATIF"}
-              value={`${allDataSummary.fakultatif.toLocaleString("id-ID")} / `}
-              additionalInfo={`${(allDataSummary.fakultatif * 3).toLocaleString(
-                "id-ID"
-              )} Kg`}
-              cs={"p-4"}
-            />
+                <SummaryItems
+                  icon={<PackagePlus className="h-10 w-10 text-white" />}
+                  title={"TOTAL FAKULTATIF"}
+                  value={`${allDataSummary.fakultatif.toLocaleString(
+                    "id-ID"
+                  )} / `}
+                  additionalInfo={`${(
+                    allDataSummary.fakultatif * 3
+                  ).toLocaleString("id-ID")} Kg`}
+                  cs={"p-4"}
+                />
 
-            <SummaryItems
-              icon={<CalendarX2 className="h-10 w-10 text-white" />}
-              title={"TOTAL ALOKASI TIDAK DITEBUS"}
-              value={`${allDataSummary.tidakTembus.toLocaleString("id-ID")} / `}
-              additionalInfo={`${(
-                allDataSummary.tidakTembus * 3
-              ).toLocaleString("id-ID")} Kg`}
-              cs={"p-4"}
-            />
+                <SummaryItems
+                  icon={<CalendarX2 className="h-10 w-10 text-white" />}
+                  title={"TOTAL ALOKASI TIDAK DITEBUS"}
+                  value={`${allDataSummary.tidakTembus.toLocaleString(
+                    "id-ID"
+                  )} / `}
+                  additionalInfo={`${(
+                    allDataSummary.tidakTembus * 3
+                  ).toLocaleString("id-ID")} Kg`}
+                  cs={"p-4"}
+                />
 
-            <SummaryItems
-              icon={<ChartSpline className="h-10 w-10 text-white" />}
-              title={"RATA-RATA DISTRIBUSI"}
-              value={`${Number(allDataSummary.average).toLocaleString(
-                "id-ID"
-              )} / `}
-              additionalInfo={`${(
-                Number(allDataSummary.average) * 3
-              ).toLocaleString("id-ID")} Kg`}
-              cs={"p-4"}
-            />
+                <SummaryItems
+                  icon={<ChartSpline className="h-10 w-10 text-white" />}
+                  title={"RATA-RATA DISTRIBUSI"}
+                  value={`${Number(allDataSummary.average).toLocaleString(
+                    "id-ID"
+                  )} / `}
+                  additionalInfo={`${(
+                    Number(allDataSummary.average) * 3
+                  ).toLocaleString("id-ID")} Kg`}
+                  cs={"p-4"}
+                />
+              </>
+            )}
           </div>
         </Card>
       </div>
