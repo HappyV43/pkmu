@@ -30,8 +30,8 @@ import {
   CalendarCheck,
   Database,
   Handshake,
+  Loader2,
   Search,
-  SearchX,
   Upload,
   Weight,
   X,
@@ -47,9 +47,7 @@ type valuesFilter = {
 };
 
 type dataBpeDeliveryAgent = {
-  status: string;
   agentName: string;
-  deliveryNumber: string;
 };
 
 const AlokasiHarian = ({
@@ -326,7 +324,13 @@ const AlokasiHarian = ({
                               initialFocus
                               mode="range"
                               selected={field.value}
-                              onSelect={field.onChange}
+                              onSelect={(newDate) => {
+                                if (newDate == null) {
+                                  field.onChange(null);
+                                } else {
+                                  field.onChange(newDate);
+                                }
+                              }}
                               disabled={(date) =>
                                 date > new Date() ||
                                 date < new Date("2000-01-01")
@@ -362,8 +366,12 @@ const AlokasiHarian = ({
                       className="flex w-full sm:w-auto items-center mr-2"
                       disabled={loading}
                     >
-                      <Search className="h-4 w-4 cursor-pointer" />
-                      {loading ? "Loading..." : "Cari"}
+                      {loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Search className="h-4 w-4 mr-2" />
+                      )}
+                      Cari
                     </Button>
                     {/* {isFiltered && ( */}
                     <Button

@@ -11,6 +11,8 @@ import {
   startOfYear,
 } from "date-fns";
 import { id } from "date-fns/locale";
+import html2canvas from "html2canvas";
+import { MutableRefObject } from "react";
 
 export const generateColor = (index: number) => {
   const pastelColorPalette = [
@@ -228,3 +230,35 @@ export function toNormalCase(str: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase()) // Capitalize the first letter of each word
     .trim(); // Remove any leading or trailing spaces
 }
+
+export const downloadAnnuallyChart = async (annuallyChartRef: any) => {
+  try {
+    const chart = annuallyChartRef.current;
+    if (chart) {
+      const canvas = await html2canvas(chart);
+      const imgData = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = "Chart Tahunan.png";
+      link.click();
+    }
+  } catch (error) {
+    console.error("Terjadi kesalahan saat mengunduh chart tahunan:", error);
+  }
+};
+
+export const downloadWeeklyChart = async (weeklyChartRef: any) => {
+  try {
+    const chart = weeklyChartRef.current;
+    if (chart) {
+      const canvas = await html2canvas(chart);
+      const imgData = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = "Chart Mingguan.png";
+      link.click();
+    }
+  } catch (error) {
+    console.error("Terjadi kesalahan saat mengunduh chart mingguan:", error);
+  }
+};

@@ -14,10 +14,12 @@ export async function POST(req: NextRequest) {
     let toDate = to ? new Date(to) : null;
 
     if (fromDate) {
+      fromDate.setUTCDate(fromDate.getUTCDate() + 1);
       fromDate.setUTCHours(0, 0, 0, 0);
     }
 
     if (toDate) {
+      toDate.setUTCDate(toDate.getUTCDate() + 1);
       toDate.setUTCHours(23, 59, 59, 999);
     } else if (fromDate && !toDate) {
       // Kalau hanya ada fromDate, set toDate ke akhir hari yang sama
@@ -27,16 +29,19 @@ export async function POST(req: NextRequest) {
 
     const dateFilter = fromDate && toDate ? { gte: fromDate, lte: toDate } : {};
 
-    console.log("fromDate:", fromDate);
-    console.log("toDate:", toDate);
-
-    const [dailySummary, distributionSummary, monthlyData, uniqueDate] =
+    const [dailySummary, dailySummaryGiDate, distributionSummary, monthlyData, uniqueDate] =
       await prisma.$transaction([
         prisma.allocations.aggregate({
           _sum: { allocatedQty: true },
           _count: { allocatedQty: true },
-          where: { giDate: dateFilter },
+          where: { plannedGiDate: dateFilter },
           orderBy: { plannedGiDate: "asc" },
+        }),
+        prisma.allocations.aggregate({
+          _sum: { allocatedQty: true },
+          _count: { allocatedQty: true },
+          where: { giDate: dateFilter },
+          orderBy: { giDate: "asc" },
         }),
         prisma.lpgDistributions.aggregate({
           _sum: { distributionQty: true },
@@ -62,7 +67,7 @@ export async function POST(req: NextRequest) {
         }),
       ]);
 
-    console.log(monthlyData);
+    console.log(dailySummary);
 
     const totalProps = uniqueDate.reduce(
       (a, obj) => a + Object.keys(obj).length,
@@ -70,22 +75,23 @@ export async function POST(req: NextRequest) {
     );
 
     const dailyAllo = dailySummary._sum?.allocatedQty;
+    const dailyAlloGiDate = dailySummaryGiDate._sum?.allocatedQty;
     const dailyDistri = distributionSummary._sum?.distributionQty;
     const dailyMonthly = monthlyData._sum?.totalElpiji;
 
     const pending =
-      (dailyAllo ?? 0) > (dailyDistri ?? 0)
-        ? (dailyAllo ?? 0) - (dailyDistri ?? 0)
+      (dailyAlloGiDate ?? 0) > (dailyDistri ?? 0)
+        ? (dailyAlloGiDate ?? 0) - (dailyDistri ?? 0)
         : 0;
 
     const fakultatif =
-      (dailyAllo ?? 0) > (dailyMonthly ?? 0)
-        ? (dailyAllo ?? 0) - (dailyMonthly ?? 0)
+      (dailyAlloGiDate ?? 0) > (dailyMonthly ?? 0)
+        ? (dailyAlloGiDate ?? 0) - (dailyMonthly ?? 0)
         : 0;
 
     const tidakTembus =
-      (dailyMonthly ?? 0) > (dailyAllo ?? 0)
-        ? (dailyMonthly ?? 0 ?? 0) - (dailyAllo ?? 0)
+      (dailyMonthly ?? 0) > (dailyAlloGiDate ?? 0)
+        ? (dailyMonthly ?? 0 ?? 0) - (dailyAlloGiDate ?? 0)
         : 0;
 
     const average = ((dailyAllo ?? 0) / (totalProps || 1)).toFixed(2);

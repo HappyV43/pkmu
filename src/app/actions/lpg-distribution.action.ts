@@ -66,6 +66,7 @@ export const postLpgData = async (formData: FormData) => {
   const administrasi = formData.get("administrasi")?.toString() || "";
   const gateKeeper = formData.get("gateKeeper")?.toString() || "";
 
+  waktuPengambilan.setUTCHours(0, 0, 0, 0);
   if (
     !nomorTransaksi ||
     !nomorDo ||
@@ -249,12 +250,11 @@ export const getNextNumber = async () => {
 };
 
 export const getFilterData = cache(async () => {
-  return await prisma.lpgDistributions.findMany({
+  return await prisma.agents.findMany({
     select: {
-      deliveryNumber: true,
       agentName: true,
     },
-    distinct: ["agentName"],
+    orderBy: { agentName: "asc" },
   });
 });
 

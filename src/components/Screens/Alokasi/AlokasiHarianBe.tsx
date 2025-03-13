@@ -47,9 +47,7 @@ type valuesFilter = {
 };
 
 type dataBpeDeliveryAgent = {
-  status: string;
   agentName: string;
-  deliveryNumber: string;
 };
 
 const AlokasiHarianBe = ({
@@ -264,7 +262,7 @@ const AlokasiHarianBe = ({
                       </FormItem>
                     )}
                   />
-                  <FormField
+                  {/* <FormField
                     control={form.control}
                     name="deliveryNumber"
                     render={({ field }) => (
@@ -283,7 +281,7 @@ const AlokasiHarianBe = ({
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
+                  /> */}
                   <FormField
                     control={form.control}
                     name="range"

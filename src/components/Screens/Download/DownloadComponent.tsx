@@ -43,7 +43,6 @@ type valuesFilter = {
 
 type bpeNumberData = {
   agentName: string;
-  deliveryNumber: string;
 };
 
 type LpgDistribution = {
@@ -190,7 +189,7 @@ export default function DownloadComponent({
                   name="range"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg"> Tanggal</FormLabel>
+                      <FormLabel className="block text-lg"> Tanggal</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -223,7 +222,13 @@ export default function DownloadComponent({
                           <Calendar
                             mode="range"
                             selected={field.value}
-                            onSelect={field.onChange}
+                            onSelect={(newDate) => {
+                              if (newDate == null) {
+                                field.onChange(null);
+                              } else {
+                                field.onChange(newDate);
+                              }
+                            }}
                             disabled={(date) =>
                               date > new Date() || date < new Date("1900-01-01")
                             }

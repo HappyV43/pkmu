@@ -5,7 +5,7 @@ import {
   allDataDefault,
   getSummaryToday,
   getWeeklySummaryDefault,
-  getYearlySummaryData,
+  getAnnualSummaryData,
 } from "../actions/summary.action";
 
 export const metadata = {
@@ -13,13 +13,14 @@ export const metadata = {
 };
 
 const SummaryPage = async () => {
-  const [sessionData, summaryData, weekly, yearly, allData] = await Promise.all([
-    getCurrentSession(),
-    getSummaryToday(),
-    getWeeklySummaryDefault(),
-    getYearlySummaryData(),
-    allDataDefault()
-  ]);
+  const [sessionData, summaryData, weekly, annually, allData] =
+    await Promise.all([
+      getCurrentSession(),
+      getSummaryToday(),
+      getWeeklySummaryDefault(),
+      getAnnualSummaryData(),
+      allDataDefault(),
+    ]);
 
   const { session, user } = sessionData;
   if (!session && !user) {
@@ -31,7 +32,12 @@ const SummaryPage = async () => {
     //   home={"summary"}
     //   children={
     <>
-      <Summary defaultdata={summaryData} weekly={weekly} yearly={yearly} allData={allData} />
+      <Summary
+        defaultdata={summaryData}
+        weekly={weekly}
+        annually={annually}
+        allData={allData}
+      />
     </>
 
     // }

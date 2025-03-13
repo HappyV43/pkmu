@@ -6,11 +6,19 @@ import { startOfMonth, endOfMonth, eachMonthOfInterval } from "date-fns";
 export const getSummaryToday = async () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
-  const [dailySummary, distributionSummary, monthlyData] =
+  const [dailySummary, dailySummaryPlanned, distributionSummary, monthlyData] =
     await prisma.$transaction([
+      prisma.allocations.aggregate({
+        _sum: { allocatedQty: true },
+        _count: { _all: true },
+        where: {
+          giDate: { gte: today, lt: tomorrow },
+        },
+      }),
       prisma.allocations.aggregate({
         _sum: { allocatedQty: true },
         _count: { _all: true },
@@ -45,10 +53,9 @@ export const getSummaryToday = async () => {
       : 0;
 
   const fakultatif =
-    (dailyAllo ?? 0) >= safeMonthlyData.totalElpiji
+    (dailyAllo ?? 0) > safeMonthlyData.totalElpiji
       ? (dailyAllo ?? 0) - safeMonthlyData.totalElpiji
       : 0;
-
   const tidakTembus =
     safeMonthlyData.totalElpiji >= (dailyAllo ?? 0)
       ? (safeMonthlyData.totalElpiji ?? 0) - (dailyAllo ?? 0)
@@ -56,6 +63,7 @@ export const getSummaryToday = async () => {
 
   return {
     dailySummary,
+    dailySummaryPlanned,
     distributionSummary,
     safeMonthlyData,
     pending,
@@ -103,19 +111,15 @@ export const getWeeklySummaryDefault = async () => {
       )
     );
   } else if (day >= 15 && day <= 21) {
-    startDate = new Date(
-      Date.UTC(startMonth.getFullYear(), startMonth.getMonth(), 15)
-    );
+    startDate = new Date(startMonth.getFullYear(), startMonth.getMonth(), 15);
     endDate = new Date(
-      Date.UTC(
-        startMonth.getFullYear(),
-        startMonth.getMonth(),
-        21,
-        23,
-        59,
-        59,
-        999
-      )
+      startMonth.getFullYear(),
+      startMonth.getMonth(),
+      21,
+      23,
+      59,
+      59,
+      999
     );
   } else {
     startDate = new Date(
@@ -128,12 +132,12 @@ export const getWeeklySummaryDefault = async () => {
   const [dailySummary, distributionSummary, monthlyData] =
     await prisma.$transaction([
       prisma.allocations.groupBy({
-        by: ["giDate"],
+        by: ["plannedGiDate"],
         _sum: { allocatedQty: true },
         where: {
-          giDate: { gte: startDate, lte: endDate },
+          plannedGiDate: { gte: startDate, lte: endDate },
         },
-        orderBy: { giDate: "asc" },
+        orderBy: { plannedGiDate: "asc" },
       }),
       prisma.lpgDistributions.groupBy({
         by: ["giDate"],
@@ -168,8 +172,8 @@ export const getWeeklySummaryDefault = async () => {
 
   const weeklySummary = dateRange.map((date) => {
     const daily = dailySummary.find((item) => {
-      if (!item.giDate) return false;
-      return new Date(item.giDate).toDateString() === date.toDateString();
+      if (!item.plannedGiDate) return false;
+      return new Date(item.plannedGiDate).toDateString() === date.toDateString();
     });
 
     const distribution = distributionSummary.find(
@@ -189,7 +193,7 @@ export const getWeeklySummaryDefault = async () => {
   return { weeklySummary, startDate, endDate };
 };
 
-export const getYearlySummaryData = async () => {
+export const getAnnualSummaryData = async () => {
   const now = new Date();
   const year = now.getFullYear();
   const startOfYear = new Date(year, 0, 1);
@@ -328,7 +332,7 @@ export const allDataDefault = async () => {
 
   const tidakTembus =
     (dailyMonthly ?? 0) > (dailyAllo ?? 0)
-      ? (dailyMonthly ?? 0 ?? 0) - (dailyAllo ?? 0)
+      ? (dailyMonthly ?? 0) - (dailyAllo ?? 0)
       : 0;
 
   // console.log(allDistributionSummary._count?._all);
