@@ -54,7 +54,6 @@ type valuesFilter = {
 
 type bpeNumberData = {
   agentName: string;
-  deliveryNumber: string;
 };
 
 export default function RekapanScreen({
@@ -240,7 +239,7 @@ export default function RekapanScreen({
                     </FormItem>
                   )}
                 />
-                <FormField
+                {/* <FormField
                   control={form.control}
                   name="deliveryNumber"
                   render={({ field }) => (
@@ -259,7 +258,7 @@ export default function RekapanScreen({
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                /> */}
                 <FormField
                   control={form.control}
                   name="range"
