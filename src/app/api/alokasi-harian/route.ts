@@ -37,22 +37,26 @@ export async function POST(req: NextRequest) {
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
 
-      whereConditions.OR = [
-        {
-          giDate: null,
-          updatedAt: {
-            gte: start,
-            lte: end,
-          },
-        },
-        {
-          giDate: {
-            not: null,
-            gte: start,
-            lte: end,
-          },
-        },
-      ];
+      whereConditions.plannedGiDate = {
+        gte: start,
+        lte: end,
+      }
+      // .OR = [
+      //   {
+      //     giDate: null,
+      //     updatedAt: {
+      //       gte: start,
+      //       lte: end,
+      //     },
+      //   },
+      //   {
+      //     giDate: {
+      //       not: null,
+      //       gte: start,
+      //       lte: end,
+      //     },
+      //   },
+      // ];
     }
 
     if (agentName) {

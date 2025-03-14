@@ -44,7 +44,7 @@ export const getSummaryToday = async () => {
   const safeMonthlyData =
     monthlyData.length > 0 ? monthlyData[0] : { totalElpiji: 0, volume: 0 };
 
-  const dailyAllo = Number(dailySummary._sum?.allocatedQty ?? 0);
+  const dailyAllo = Number(dailySummaryPlanned._sum?.allocatedQty ?? 0);
   const dailyDistri = Number(distributionSummary._sum?.distributionQty ?? 0);
 
   const pending =
@@ -173,7 +173,9 @@ export const getWeeklySummaryDefault = async () => {
   const weeklySummary = dateRange.map((date) => {
     const daily = dailySummary.find((item) => {
       if (!item.plannedGiDate) return false;
-      return new Date(item.plannedGiDate).toDateString() === date.toDateString();
+      return (
+        new Date(item.plannedGiDate).toDateString() === date.toDateString()
+      );
     });
 
     const distribution = distributionSummary.find(

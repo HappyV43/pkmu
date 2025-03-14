@@ -29,43 +29,48 @@ export async function POST(req: NextRequest) {
 
     const dateFilter = fromDate && toDate ? { gte: fromDate, lte: toDate } : {};
 
-    const [dailySummary, dailySummaryGiDate, distributionSummary, monthlyData, uniqueDate] =
-      await prisma.$transaction([
-        prisma.allocations.aggregate({
-          _sum: { allocatedQty: true },
-          _count: { allocatedQty: true },
-          where: { plannedGiDate: dateFilter },
-          orderBy: { plannedGiDate: "asc" },
-        }),
-        prisma.allocations.aggregate({
-          _sum: { allocatedQty: true },
-          _count: { allocatedQty: true },
-          where: { giDate: dateFilter },
-          orderBy: { giDate: "asc" },
-        }),
-        prisma.lpgDistributions.aggregate({
-          _sum: { distributionQty: true },
-          _count: { distributionQty: true },
-          where: { giDate: dateFilter },
-          orderBy: { giDate: "asc" },
-        }),
-        prisma.monthlyAllocations.aggregate({
-          _sum: { totalElpiji: true },
-          _count: { totalElpiji: true },
-          where: { date: dateFilter },
-          orderBy: { date: "asc" },
-        }),
-        prisma.lpgDistributions.findMany({
-          distinct: ["giDate"],
-          select: {
-            giDate: true,
-          },
-          where: { giDate: dateFilter },
-          orderBy: {
-            giDate: "asc",
-          },
-        }),
-      ]);
+    const [
+      dailySummary,
+      dailySummaryGiDate,
+      distributionSummary,
+      monthlyData,
+      uniqueDate,
+    ] = await prisma.$transaction([
+      prisma.allocations.aggregate({
+        _sum: { allocatedQty: true },
+        _count: { allocatedQty: true },
+        where: { plannedGiDate: dateFilter },
+        orderBy: { plannedGiDate: "asc" },
+      }),
+      prisma.allocations.aggregate({
+        _sum: { allocatedQty: true },
+        _count: { allocatedQty: true },
+        where: { giDate: dateFilter },
+        orderBy: { giDate: "asc" },
+      }),
+      prisma.lpgDistributions.aggregate({
+        _sum: { distributionQty: true },
+        _count: { distributionQty: true },
+        where: { giDate: dateFilter },
+        orderBy: { giDate: "asc" },
+      }),
+      prisma.monthlyAllocations.aggregate({
+        _sum: { totalElpiji: true },
+        _count: { totalElpiji: true },
+        where: { date: dateFilter },
+        orderBy: { date: "asc" },
+      }),
+      prisma.lpgDistributions.findMany({
+        distinct: ["giDate"],
+        select: {
+          giDate: true,
+        },
+        where: { giDate: dateFilter },
+        orderBy: {
+          giDate: "asc",
+        },
+      }),
+    ]);
 
     console.log(dailySummary);
 
@@ -74,24 +79,27 @@ export async function POST(req: NextRequest) {
       0
     );
 
+    // Pake buat PlannedGi
     const dailyAllo = dailySummary._sum?.allocatedQty;
+
+    // Pake buat GiDate
     const dailyAlloGiDate = dailySummaryGiDate._sum?.allocatedQty;
     const dailyDistri = distributionSummary._sum?.distributionQty;
     const dailyMonthly = monthlyData._sum?.totalElpiji;
 
     const pending =
-      (dailyAlloGiDate ?? 0) > (dailyDistri ?? 0)
-        ? (dailyAlloGiDate ?? 0) - (dailyDistri ?? 0)
+      (dailyAllo ?? 0) > (dailyDistri ?? 0)
+        ? (dailyAllo ?? 0) - (dailyDistri ?? 0)
         : 0;
 
     const fakultatif =
-      (dailyAlloGiDate ?? 0) > (dailyMonthly ?? 0)
-        ? (dailyAlloGiDate ?? 0) - (dailyMonthly ?? 0)
+      (dailyAllo ?? 0) > (dailyMonthly ?? 0)
+        ? (dailyAllo ?? 0) - (dailyMonthly ?? 0)
         : 0;
 
     const tidakTembus =
-      (dailyMonthly ?? 0) > (dailyAlloGiDate ?? 0)
-        ? (dailyMonthly ?? 0 ?? 0) - (dailyAlloGiDate ?? 0)
+      (dailyMonthly ?? 0) > (dailyAllo ?? 0)
+        ? (dailyMonthly ?? 0) - (dailyAllo ?? 0)
         : 0;
 
     const average = ((dailyAllo ?? 0) / (totalProps || 1)).toFixed(2);

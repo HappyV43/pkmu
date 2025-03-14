@@ -88,7 +88,7 @@ export const getAllocationDefault = async () => {
     where: {
       AND: [
         {
-          createdAt: {
+          plannedGiDate: {
             gte: today,
           },
         },

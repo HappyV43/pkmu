@@ -250,9 +250,9 @@ const Summary = ({ defaultdata, weekly, annually, allData }: SummaryProps) => {
                   : 0
               } / `}
               additionalInfo={`${
-                summaryData?.dailySummary._sum.allocatedQty
+                summaryData?.dailySummaryPlanned._sum.allocatedQty
                   ? (
-                      summaryData?.dailySummary._sum.allocatedQty * 3
+                      summaryData?.dailySummaryPlanned._sum.allocatedQty * 3
                     ).toLocaleString("id-ID")
                   : "0"
               } Kg`}
@@ -323,13 +323,25 @@ const Summary = ({ defaultdata, weekly, annually, allData }: SummaryProps) => {
             <h1 className="text-xl sm:text-2xl font-semibold">
               Ringkasan
               <span className="text-xs sm:text-sm ml-2 font-semibold text-gray-500">
-                {dateFilter?.from && dateFilter?.to
+                {dateFilter?.from ? (
+                  dateFilter.to ? (
+                    <>
+                      {format(dateFilter.from, "dd MMMM yyyy", { locale: id })}{" "}
+                      - {format(dateFilter.to, "dd MMMM yyyy", { locale: id })}
+                    </>
+                  ) : (
+                    format(dateFilter.from, "dd MMMM yyyy", { locale: id })
+                  )
+                ) : (
+                  <span>Semua Tanggal</span>
+                )}
+                {/* {dateFilter?.from ? dateFilter?.to
                   ? `${format(dateFilter.from, "dd MMMM yyyy", {
                       locale: id,
                     })} - ${format(dateFilter.to, "dd MMMM yyyy", {
                       locale: id,
                     })}`
-                  : "Semua Tanggal"}
+                  : } */}
               </span>
             </h1>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center w-full sm:w-auto">
@@ -382,7 +394,9 @@ const Summary = ({ defaultdata, weekly, annually, allData }: SummaryProps) => {
                 <CalendarCheck className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
               }
               title={`TOTAL ALOKASI HARIAN (${
-                allDataSummary?.allSummary?._count?._all?.toLocaleString("id-ID") || 0
+                allDataSummary?.allSummary?._count?._all?.toLocaleString(
+                  "id-ID"
+                ) || 0
               })`}
               value={`${(
                 allDataSummary.allSummary._sum.allocatedQty ?? 0
