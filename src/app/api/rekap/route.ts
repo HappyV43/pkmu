@@ -33,9 +33,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      whereConditions.giDate = {
-        gte: new Date(start.setHours(0, 0, 0, 0)),
-      };
+      fromDate.setUTCHours(0, 0, 0, 0);
     }
 
     if (toDate) {
@@ -46,22 +44,17 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      whereConditions.giDate = {
-        ...whereConditions.giDate,
-        lte: new Date(end.setHours(23, 59, 59, 999)),
-      };
+      end.setUTCHours(23, 59, 59, 999);
     } else if (fromDate && !toDate) {
       // Jika hanya ada fromDate, ambil data untuk hari itu saja
-      whereConditions.giDate = {
-        gte: new Date(fromDate.setHours(0, 0, 0, 0)),
-        lte: new Date(fromDate.setHours(23, 59, 59, 999)),
-      };
+      toDate = new Date(fromDate);
+      toDate.setUTCHours(23, 59, 59, 999);
     }
 
-    // Mengambil semua data yang difilter tanpa pagination
+    const dateFilter = fromDate && toDate ? { gte: fromDate, lte: toDate } : {};
+
     const filteredData = await prisma.lpgDistributions.findMany({
-      where:
-        Object.keys(whereConditions).length > 0 ? whereConditions : undefined,
+      where: { giDate: dateFilter },
       orderBy: { bpeNumber: "desc" },
       select: {
         id: true,
@@ -74,47 +67,78 @@ export async function POST(req: NextRequest) {
         distributionQty: true,
         volume: true,
         driverName: true,
-        allocationId: true, // Tambahkan allocationId untuk mencocokkan data
+        allocationId: true,
       },
     });
 
-    const allocationData = await prisma.allocations.findMany({
-      where: {
-        id: {
-          in: filteredData.map((d) => d.allocationId),
+    // Pastikan filteredData punya allocationId sebelum query allocation & monthly data
+    const [allocationData, monthlyData] = await prisma.$transaction([
+      prisma.allocations.findMany({
+        where: {
+          plannedGiDate: dateFilter,
         },
-      },
-      select: {
-        id: true,
-        materialName: true,
-      },
-    });
+        select: {
+          id: true,
+          materialName: true,
+          plannedGiDate: true,
+          allocatedQty: true,
+        },
+      }),
+      prisma.monthlyAllocations.findMany({
+        where: {
+          date: {
+            gte: startOfMonth(new Date()),
+            lte: endOfMonth(new Date()),
+          },
+        },
+        select: {
+          date: true,
+          totalElpiji: true,
+        },
+      }),
+    ]);
 
+    // 1. Reduce allocatedQty berdasarkan plannedGiDate dari allocationData
+    const plannedAllocationByDate = allocationData.reduce((acc: any, item) => {
+      const plannedDateKey = item.plannedGiDate
+        ? new Date(item.plannedGiDate).toISOString().split("T")[0]
+        : null;
+
+      if (plannedDateKey) {
+        if (!acc[plannedDateKey]) {
+          acc[plannedDateKey] = 0;
+        }
+
+        acc[plannedDateKey] += item.allocatedQty || 0;
+      }
+
+      return acc;
+    }, {});
+    const totalPlannedAllocation = Object.values(plannedAllocationByDate)[0];
+
+    // Mengambil semua data yang difilter tanpa pagination
     const allocationMap = new Map(
       allocationData.map((item) => [
         item.id,
-        item.materialName.includes("REFILL") ? "REFILL" : item.materialName,
+        {
+          materialName: item.materialName.includes("REFILL")
+            ? "REFILL"
+            : item.materialName,
+          plannedGiDate: item.plannedGiDate,
+          plannedAllocationQty: item.allocatedQty,
+        },
       ])
     );
 
     // Gabungkan data berdasarkan allocationId
     const mergedData = filteredData.map((item) => ({
       ...item,
-      materialName: allocationMap.get(item.allocationId) || null, // Tambahkan materialName
+      materialName: allocationMap.get(item.allocationId)?.materialName || null,
+      plannedGiDate:
+        allocationMap.get(item.allocationId)?.plannedGiDate || null,
+      plannedAllocationQty:
+        allocationMap.get(item.allocationId)?.plannedAllocationQty || 0,
     }));
-
-    const monthlyData = await prisma.monthlyAllocations.findMany({
-      where: {
-        date: {
-          gte: startOfMonth(new Date()),
-          lte: endOfMonth(new Date()),
-        },
-      },
-      select: {
-        date: true,
-        totalElpiji: true,
-      },
-    });
 
     // Group data by date
     const groupedData = mergedData.reduce((acc: any, item) => {
@@ -144,7 +168,7 @@ export async function POST(req: NextRequest) {
       acc[dateKey].quantity.totalElpiji = matchingMonthly
         ? matchingMonthly.totalElpiji
         : 0;
-      acc[dateKey].quantity.totalAllocatedQty += item.allocatedQty || 0;
+      acc[dateKey].quantity.totalAllocatedQty = totalPlannedAllocation || 0;
       acc[dateKey].quantity.totalDistributionQty += item.distributionQty || 0;
       acc[dateKey].quantity.totalLo =
         acc[dateKey].quantity.totalElpiji >
