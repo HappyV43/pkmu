@@ -21,6 +21,7 @@ import {
   calculateMontlyQty,
 } from "@/utils/page";
 import { id } from "date-fns/locale";
+import { toast } from "@/hooks/use-toast";
 import { MonthlyAllocation } from "@/lib/types";
 import { getMonthlyAllocation } from "@/app/actions/alokasi.action";
 import InfoCard from "@/components/InfoCard";
@@ -29,47 +30,83 @@ import { User } from "../../../../generated/prisma_client";
 interface AlokasiBulananProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   user: User;
+  data: any;
 }
 
 const AlokasiBulanan = <TData extends MonthlyAllocation, TValue>({
   columns,
   user,
+  data,
 }: AlokasiBulananProps<TData, TValue>) => {
   const [rawData, setRawData] = useState<TData[]>([]);
   const [currentMonth, setCurrentMonth] = useState<Date | null>(new Date());
-  const [filteredData, setFilteredData] = useState<TData[]>([]);
+  const [filteredData, setFilteredData] = useState<TData[]>(data ?? []);
   const [isFiltered, setIsFiltered] = useState<Boolean>(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (currentMonth) {
-      const filtered = rawData.filter((item) =>
-        item.date ? isSameMonth(new Date(item.date), currentMonth) : false
-      );
-      setLoading(false);
+  // console.log(data)
 
-      setIsFiltered(true);
-      setFilteredData(filtered);
-    } else {
-      setLoading(false);
-      setIsFiltered(false);
-      setFilteredData(rawData);
+  // useEffect(() => {
+  //   if (currentMonth) {
+  //     const filtered = rawData.filter((item) =>
+  //       item.date ? isSameMonth(new Date(item.date), currentMonth) : false
+  //     );
+  //     setLoading(false);
+
+  //     setIsFiltered(true);
+  //     setFilteredData(filtered);
+  //   } else {
+  //     setLoading(false);
+  //     setIsFiltered(false);
+  //     setFilteredData(rawData);
+  //   }
+  // }, [currentMonth, rawData]);
+
+  // const handleClearSearch = () => {
+  //   setCurrentMonth(new Date());
+  //   setIsFiltered(false);
+  // };
+
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     const data = (await getMonthlyAllocation()) as TData[];
+  //     setRawData(data);
+  //     // console.log(data);
+  //   };
+  //   fetchData();
+  // }, []);
+  const handleMonthChange = async (newMonth: Date | null) => {
+    if (!newMonth) return;
+
+    setCurrentMonth(newMonth);
+
+    const formattedMonth = format(newMonth, "yyyy-MM-dd");
+    console.log("Formatted Month for API:", formattedMonth);
+
+    try {
+      const response = await fetch("/api/alokasi-bulanan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month: formattedMonth }),
+      });
+
+      if (!response.ok) {
+        toast({
+          title: "Gagal",
+          description: `HTTP error! Status: ${response.status}`,
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+
+      const newData = await response.json();
+      setFilteredData(newData.data);
+      // console.log("Response from API:", data);
+    } catch (err) {
+      console.error("Error:", err);
     }
-  }, [currentMonth, rawData]);
-
-  const handleClearSearch = () => {
-    setCurrentMonth(new Date());
-    setIsFiltered(false);
   };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = (await getMonthlyAllocation()) as TData[];
-      setRawData(data);
-      // console.log(data);
-    };
-    fetchData();
-  }, []);
 
   return (
     <div className="mx-5">
@@ -104,7 +141,7 @@ const AlokasiBulanan = <TData extends MonthlyAllocation, TValue>({
           )}
 
           <div className="w-full md:w-auto flex md:items-center gap-2 items-center">
-            {loading ? (
+            {/* {loading ? (
               <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-md shadow-sm animate-fade-in">
                 <Loader2
                   className="animate-spin h-5 w-5 text-gray-500"
@@ -114,18 +151,19 @@ const AlokasiBulanan = <TData extends MonthlyAllocation, TValue>({
                   Mengambil Data...
                 </span>
               </div>
-            ) : (
-              <MonthPicker
-                currentMonth={currentMonth!}
-                onMonthChange={setCurrentMonth}
-                placeholder={
-                  currentMonth
-                    ? format(currentMonth, "MMMM yyyy", { locale: id })
-                    : "Semua Bulan"
-                }
-                className="flex-1"
-              />
-            )}
+            ) : ( */}
+            <MonthPicker
+              currentMonth={currentMonth!}
+              onMonthChange={handleMonthChange}
+              placeholder={
+                currentMonth
+                  ? format(currentMonth, "MMMM yyyy", { locale: id })
+                  : "Semua Bulan"
+              }
+              className="flex-1"
+            />
+
+            {/* )} */}
             {/* {isFiltered && (
               <Button
                 variant={"destructive"}

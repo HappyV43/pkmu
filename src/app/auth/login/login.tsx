@@ -52,7 +52,7 @@ export function LoginForm() {
     } else {
       router.push("/summary");
       toast({
-        title: "Login has been successfully",
+        title: "Login berhasil",
         duration: 3000,
       });
       setIsLoading(false);

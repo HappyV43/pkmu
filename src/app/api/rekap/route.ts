@@ -86,10 +86,7 @@ export async function POST(req: NextRequest) {
       }),
       prisma.monthlyAllocations.findMany({
         where: {
-          date: {
-            gte: startOfMonth(new Date()),
-            lte: endOfMonth(new Date()),
-          },
+          date: dateFilter,
         },
         select: {
           date: true,
@@ -168,7 +165,8 @@ export async function POST(req: NextRequest) {
       acc[dateKey].quantity.totalElpiji = matchingMonthly
         ? matchingMonthly.totalElpiji
         : 0;
-      acc[dateKey].quantity.totalAllocatedQty = totalPlannedAllocation || 0;
+      acc[dateKey].quantity.totalAllocatedQty =
+        plannedAllocationByDate[dateKey] || 0;
       acc[dateKey].quantity.totalDistributionQty += item.distributionQty || 0;
       acc[dateKey].quantity.totalLo =
         acc[dateKey].quantity.totalElpiji >
@@ -177,12 +175,12 @@ export async function POST(req: NextRequest) {
             acc[dateKey].quantity.totalAllocatedQty
           : 0;
       acc[dateKey].quantity.totalPending =
-        // acc[dateKey].quantity.totalAllocatedQty >
-        // acc[dateKey].quantity.totalDistributionQty
-        //   ?
+        acc[dateKey].quantity.totalAllocatedQty >
+        acc[dateKey].quantity.totalDistributionQty
+          ?
         acc[dateKey].quantity.totalAllocatedQty -
-        acc[dateKey].quantity.totalDistributionQty;
-      // : 0;
+        acc[dateKey].quantity.totalDistributionQty
+      : 0;
 
       acc[dateKey].quantity.totalFakultatif =
         acc[dateKey].quantity.totalAllocatedQty >
